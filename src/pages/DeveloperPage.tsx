@@ -1,0 +1,152 @@
+import React, { useState, useEffect } from 'react';
+import { Header } from '../components/Header';
+import { Footer } from '../components/Footer';
+import { useLanguage } from '../contexts/LanguageContext';
+import { Github, Twitter, Instagram, Youtube, Facebook, MessageCircle, Globe, Code, Cpu, Sparkles, Share2 } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { db } from '../firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
+interface DeveloperProfile {
+  name: string;
+  role: string;
+  bio: string;
+  imageUrl: string;
+  skills: string[];
+  socials: {
+    whatsapp?: string;
+    youtube?: string;
+    github?: string;
+    twitter?: string;
+    facebook?: string;
+    instagram?: string;
+    huggingface?: string;
+  };
+}
+
+export function DeveloperPage() {
+  const { t } = useLanguage();
+  const [profile, setProfile] = useState<DeveloperProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const docRef = doc(db, 'site_settings', 'developer_profile');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setProfile(docSnap.data() as DeveloperProfile);
+        }
+      } catch (error) {
+        console.error("Error fetching developer profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  const developerSocials = [
+    { icon: MessageCircle, label: "WhatsApp", color: "bg-green-600", url: profile?.socials?.whatsapp || "#" },
+    { icon: Youtube, label: "YouTube", color: "bg-red-600", url: profile?.socials?.youtube || "#" },
+    { icon: Github, label: "GitHub", color: "bg-slate-900", url: profile?.socials?.github || "#" },
+    { icon: Twitter, label: "X (Twitter)", color: "bg-slate-800", url: profile?.socials?.twitter || "#" },
+    { icon: Facebook, label: "Facebook", color: "bg-blue-600", url: profile?.socials?.facebook || "#" },
+    { icon: Instagram, label: "Instagram", color: "bg-pink-600", url: profile?.socials?.instagram || "#" },
+    { icon: Sparkles, label: "Hugging Face", color: "bg-yellow-500", url: profile?.socials?.huggingface || "#" },
+  ].filter(social => social.url !== "#" && social.url !== "");
+
+  const skills = profile?.skills?.length ? profile.skills : ["React", "TypeScript", "Firebase", "Tailwind CSS", "Node.js", "Python", "AI/ML"];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-academic-blue"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header />
+      
+      <main className="flex-1 py-12 px-4">
+        <div className="max-w-4xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden"
+          >
+            <div className="bg-gradient-to-br from-slate-900 to-academic-blue p-12 text-center text-white relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-full opacity-10">
+                <Code size={300} className="absolute -top-20 -left-20 rotate-12" />
+                <Cpu size={300} className="absolute -bottom-20 -right-20 -rotate-12" />
+              </div>
+              
+              <div className="relative z-10">
+                {profile?.imageUrl ? (
+                  <div className="w-32 h-32 mx-auto mb-6 rounded-full border-4 border-white/30 shadow-2xl overflow-hidden bg-white">
+                    <img src={profile.imageUrl} alt="Developer" className="w-full h-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="w-32 h-32 bg-white/20 backdrop-blur-md rounded-full mx-auto mb-6 flex items-center justify-center border-4 border-white/30 shadow-2xl">
+                    <span className="text-2xl font-serif font-bold">MRC.dev</span>
+                  </div>
+                )}
+                <h1 className="text-4xl md:text-5xl font-serif font-bold mb-2">
+                  {profile?.name || t('meetTheDeveloper')}
+                </h1>
+                <p className="text-blue-200 text-lg max-w-2xl mx-auto">
+                  {profile?.role || "Building the future of student information systems."}
+                </p>
+              </div>
+            </div>
+
+            <div className="p-8 md:p-12">
+              <div className="max-w-2xl mx-auto text-center mb-12">
+                <h2 className="text-2xl font-serif font-bold text-academic-blue mb-4">About Me</h2>
+                <p className="text-slate-600 leading-relaxed whitespace-pre-wrap">
+                  {profile?.bio || t('developerDesc')}
+                </p>
+              </div>
+
+              <div className="mb-12">
+                <h3 className="text-center font-bold text-slate-800 mb-6 uppercase tracking-widest text-sm">Skills & Technologies</h3>
+                <div className="flex flex-wrap justify-center gap-3">
+                  {skills.map((skill, index) => (
+                    <span key={index} className="px-4 py-2 bg-slate-50 text-slate-600 rounded-xl border border-slate-100 font-medium hover:bg-academic-blue hover:text-white transition-all cursor-default">
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-12 border-t border-slate-100">
+                <h3 className="text-center font-bold text-slate-800 mb-8 uppercase tracking-widest text-sm">Connect with Me</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  {developerSocials.map((social, index) => {
+                    const Icon = social.icon;
+                    return (
+                      <a 
+                        key={index}
+                        href={social.url}
+                        className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all group"
+                      >
+                        <div className={`w-12 h-12 ${social.color} text-white rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                          <Icon size={24} />
+                        </div>
+                        <span className="text-xs font-bold text-slate-600">{social.label}</span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </main>
+
+      <Footer />
+    </div>
+  );
+}

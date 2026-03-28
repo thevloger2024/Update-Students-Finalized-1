@@ -1,0 +1,254 @@
+{
+  "entities": {
+    "Update": {
+      "title": "Update",
+      "description": "An educational or job update (Latest Jobs, Admit Card, Result).",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "The title of the update."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["job", "admit_card", "result"],
+          "description": "The section this update belongs to."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category (e.g., RRB, SSC, UPSC)."
+        },
+        "state": {
+          "type": "string",
+          "description": "The state this update is relevant to. Use 'All India' for central updates."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "Start date (for jobs)."
+        },
+        "endDate": {
+          "type": "string",
+          "description": "End date (for jobs)."
+        },
+        "updateDate": {
+          "type": "string",
+          "description": "Last updated date (for jobs)."
+        },
+        "releaseDate": {
+          "type": "string",
+          "description": "Release date (for admit cards and results)."
+        },
+        "organization": {
+          "type": "string",
+          "description": "The organization issuing the update."
+        },
+        "posts": {
+          "type": "number",
+          "description": "Number of posts available."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the update."
+        },
+        "ageLimit": {
+          "type": "string",
+          "description": "Age limit information."
+        },
+        "officialUrl": {
+          "type": "string",
+          "description": "URL to the official notice or application page."
+        },
+        "requiredDocuments": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of documents required for the application."
+        },
+        "applicationFees": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "category": { "type": "string" },
+              "fee": { "type": "string" }
+            }
+          },
+          "description": "Application fees by category."
+        },
+        "postVacancies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "postName": { "type": "string" },
+              "count": { "type": "number" }
+            }
+          },
+          "description": "Post-wise vacancy counts."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp of creation."
+        }
+      },
+      "required": ["title", "type", "category", "state", "organization", "description", "createdAt"]
+    },
+    "Bookmark": {
+      "title": "Bookmark",
+      "description": "A saved update for a user.",
+      "type": "object",
+      "properties": {
+        "updateId": {
+          "type": "string",
+          "description": "The ID of the update being bookmarked."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title of the update (denormalized for easy listing)."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["job", "admit_card", "result"],
+          "description": "The type of the update."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "When the bookmark was created."
+        }
+      },
+      "required": ["updateId", "title", "type", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedback, issue reports, or suggestions.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who submitted the feedback (optional)."
+        },
+        "userEmail": {
+          "type": "string",
+          "description": "The email of the user (optional)."
+        },
+        "type": {
+          "type": "string",
+          "enum": ["issue", "suggestion", "experience"],
+          "description": "The type of feedback."
+        },
+        "message": {
+          "type": "string",
+          "description": "The feedback message."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp of submission."
+        }
+      },
+      "required": ["type", "message", "createdAt"]
+    },
+    "NotificationSettings": {
+      "title": "NotificationSettings",
+      "description": "User preferences for notifications.",
+      "type": "object",
+      "properties": {
+        "globalEnabled": {
+          "type": "boolean",
+          "description": "Whether notifications are enabled globally."
+        },
+        "jobsEnabled": {
+          "type": "boolean",
+          "description": "Whether job notifications are enabled."
+        },
+        "admitCardsEnabled": {
+          "type": "boolean",
+          "description": "Whether admit card notifications are enabled."
+        },
+        "resultsEnabled": {
+          "type": "boolean",
+          "description": "Whether result notifications are enabled."
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Timestamp of last update."
+        }
+      },
+      "required": ["globalEnabled", "jobsEnabled", "admitCardsEnabled", "resultsEnabled", "updatedAt"]
+    },
+    "UserPreferences": {
+      "title": "UserPreferences",
+      "description": "General user preferences like selected state.",
+      "type": "object",
+      "properties": {
+        "preferredState": {
+          "type": "string",
+          "description": "The user's preferred state for filtering updates."
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Timestamp of last update."
+        }
+      },
+      "required": ["preferredState", "updatedAt"]
+    },
+    "SocialLink": {
+      "title": "SocialLink",
+      "description": "A social media link for the platform.",
+      "type": "object",
+      "properties": {
+        "platform": {
+          "type": "string",
+          "description": "The social media platform name."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The name to display for the link."
+        },
+        "url": {
+          "type": "string",
+          "description": "The URL of the social media profile."
+        }
+      },
+      "required": ["platform", "displayName", "url"]
+    }
+  },
+  "firestore": {
+    "updates": {
+      "schema": {
+        "$ref": "#/entities/Update"
+      },
+      "description": "Collection of all educational and job updates."
+    },
+    "feedback": {
+      "schema": {
+        "$ref": "#/entities/Feedback"
+      },
+      "description": "Collection of user feedback."
+    },
+    "social_links": {
+      "schema": {
+        "$ref": "#/entities/SocialLink"
+      },
+      "description": "Collection of social media links for the footer and contact pages."
+    },
+    "users/{userId}/bookmarks": {
+      "schema": {
+        "$ref": "#/entities/Bookmark"
+      },
+      "description": "User's saved updates."
+    },
+    "users/{userId}/notificationSettings": {
+      "schema": {
+        "$ref": "#/entities/NotificationSettings"
+      },
+      "description": "User's notification preferences."
+    },
+    "users/{userId}/preferences": {
+      "schema": {
+        "$ref": "#/entities/UserPreferences"
+      },
+      "description": "User's general preferences."
+    }
+  }
+}

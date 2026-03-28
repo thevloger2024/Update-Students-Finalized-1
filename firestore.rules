@@ -1,0 +1,188 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: updates
+    // Document ID: auto-generated
+    // Fields:
+    //   - title: string (required, max 200 chars)
+    //   - type: string (required, 'job' | 'admit_card' | 'result')
+    //   - category: string (required, max 50 chars)
+    //   - state: string (required, max 50 chars)
+    //   - startDate: string (optional, max 50 chars)
+    //   - endDate: string (optional, max 50 chars)
+    //   - updateDate: string (optional, max 50 chars)
+    //   - releaseDate: string (optional, max 50 chars)
+    //   - organization: string (required, max 100 chars)
+    //   - posts: number (optional, >= 0)
+    //   - description: string (required, max 5000 chars)
+    //   - ageLimit: string (optional, max 500 chars)
+    //   - officialUrl: string (optional, max 500 chars)
+    //   - requiredDocuments: list (optional, max 50 items)
+    //   - applicationFees: list (optional, max 20 items)
+    //   - postVacancies: list (optional, max 50 items)
+    //   - createdAt: number (required)
+    //
+    // Collection: users/{userId}/bookmarks
+    // Document ID: updateId
+    // Fields:
+    //   - updateId: string (required)
+    //   - title: string (required)
+    //   - type: string (required)
+    //   - createdAt: number (required)
+    //
+    // Collection: social_links
+    // Document ID: auto-generated
+    // Fields:
+    //   - platform: string (required, max 50 chars)
+    //   - displayName: string (required, max 100 chars)
+    //   - url: string (required, max 500 chars)
+    //
+    // ===============================================================
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == "thevloger2024@gmail.com" && request.auth.token.email_verified == true
+      );
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    function isValidOptionalString(field, minLen, maxLen) {
+      return !(field in request.resource.data) ||
+             request.resource.data[field] == null ||
+             (request.resource.data[field] is string &&
+              (request.resource.data[field].size() == 0 ||
+               (request.resource.data[field].size() >= minLen &&
+                request.resource.data[field].size() <= maxLen)));
+    }
+
+    function isValidUpdate() {
+      return hasRequiredFields(['title', 'type', 'category', 'state', 'organization', 'description', 'createdAt']) &&
+             validStringLength('title', 1, 200) &&
+             request.resource.data.type in ['job', 'admit_card', 'result'] &&
+             validStringLength('category', 1, 50) &&
+             validStringLength('state', 1, 50) &&
+             validStringLength('organization', 1, 100) &&
+             validStringLength('description', 1, 5000) &&
+             request.resource.data.createdAt is number &&
+             isValidOptionalString('startDate', 1, 50) &&
+             isValidOptionalString('endDate', 1, 50) &&
+             isValidOptionalString('updateDate', 1, 50) &&
+             isValidOptionalString('releaseDate', 1, 50) &&
+             isValidOptionalString('ageLimit', 1, 500) &&
+             isValidOptionalString('officialUrl', 1, 500) &&
+             (!('requiredDocuments' in request.resource.data) || (request.resource.data.requiredDocuments is list && request.resource.data.requiredDocuments.size() <= 50)) &&
+             (!('applicationFees' in request.resource.data) || (request.resource.data.applicationFees is list && request.resource.data.applicationFees.size() <= 20)) &&
+             (!('postVacancies' in request.resource.data) || (request.resource.data.postVacancies is list && request.resource.data.postVacancies.size() <= 50)) &&
+             (!('posts' in request.resource.data) || (request.resource.data.posts is number && request.resource.data.posts >= 0));
+    }
+
+    function isValidBookmark() {
+      return hasRequiredFields(['updateId', 'title', 'type', 'createdAt']) &&
+             validStringLength('updateId', 1, 100) &&
+             validStringLength('title', 1, 200) &&
+             request.resource.data.type in ['job', 'admit_card', 'result'] &&
+             request.resource.data.createdAt is number;
+    }
+
+    function isValidFeedback() {
+      return hasRequiredFields(['type', 'message', 'createdAt']) &&
+             request.resource.data.type in ['issue', 'suggestion', 'experience'] &&
+             validStringLength('message', 1, 2000) &&
+             request.resource.data.createdAt is number &&
+             isValidOptionalString('userId', 1, 100) &&
+             isValidOptionalString('userEmail', 1, 100);
+    }
+
+    function isValidNotificationSettings() {
+      return hasRequiredFields(['globalEnabled', 'jobsEnabled', 'admitCardsEnabled', 'resultsEnabled', 'updatedAt']) &&
+             request.resource.data.globalEnabled is bool &&
+             request.resource.data.jobsEnabled is bool &&
+             request.resource.data.admitCardsEnabled is bool &&
+             request.resource.data.resultsEnabled is bool &&
+             request.resource.data.updatedAt is number;
+    }
+
+    function isValidSocialLink() {
+      return hasRequiredFields(['platform', 'displayName', 'url']) &&
+             validStringLength('platform', 1, 50) &&
+             validStringLength('displayName', 1, 100) &&
+             validStringLength('url', 1, 500);
+    }
+
+    match /updates/{updateId} {
+      // Anyone can read updates
+      allow read: if true;
+      
+      // Only admin can create, update, delete
+      allow create: if isAdmin() && isValidUpdate();
+      allow update: if isAdmin() && isValidUpdate() && request.resource.data.createdAt == resource.data.createdAt;
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId}/bookmarks/{bookmarkId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create: if isAuthenticated() && request.auth.uid == userId && isValidBookmark();
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    match /users/{userId}/notificationSettings/{settingsId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create, update: if isAuthenticated() && request.auth.uid == userId && isValidNotificationSettings();
+    }
+
+    match /users/{userId}/preferences/{prefId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create, update: if isAuthenticated() && request.auth.uid == userId && 
+        hasRequiredFields(['preferredState', 'updatedAt']) &&
+        (request.resource.data.preferredState == null || request.resource.data.preferredState is string) &&
+        request.resource.data.updatedAt is number;
+    }
+
+    match /feedback/{feedbackId} {
+      allow create: if isValidFeedback();
+      allow read, update, delete: if isAdmin();
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /users/{userId}/quiz_history/{historyId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow create, update: if isAuthenticated() && request.auth.uid == userId;
+      allow delete: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    match /social_links/{linkId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidSocialLink();
+      allow delete: if isAdmin();
+    }
+
+    match /site_settings/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
