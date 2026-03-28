@@ -262,6 +262,8 @@ export function AdminPage() {
         organization: form.organization.trim(),
         posts: form.posts ? Number(form.posts) : null,
         updatedAt: Date.now(),
+        // Ensure type is explicitly set from form
+        type: form.type || 'job',
       };
 
       if (editingId) {

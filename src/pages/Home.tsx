@@ -177,10 +177,19 @@ export function Home() {
     })
     .filter((update) => {
       const categoryMatch = selectedCategory ? update.category === selectedCategory : true;
-      const updateState = update.state.toLowerCase();
+      const updateState = (update.state || '').toLowerCase();
+      
+      // Improved state match: 
+      // 1. If no state is selected, show everything.
+      // 2. If a state is selected, show updates for that state OR global updates ('all', 'all india', or empty).
       const stateMatch = selectedState 
-        ? updateState === selectedState.toLowerCase() || updateState === 'all' || updateState === 'all india' 
+        ? updateState === selectedState.toLowerCase() || 
+          updateState === 'all' || 
+          updateState === 'all india' || 
+          updateState === '' ||
+          updateState === 'pan india'
         : true;
+        
       const searchMatch = searchQuery ? update.score > 0 : true;
 
       return categoryMatch && stateMatch && searchMatch;
