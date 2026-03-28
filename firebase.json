@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "updatestudents-in",
     "public": "dist",
     "ignore": [
       "firebase.json",

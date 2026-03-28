@@ -142,13 +142,23 @@ export const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
       </div>
       
       <div className="flex-1 p-4 flex flex-col justify-between">
-        <Link to={`/update/${update.id}`} className="block">
-          <TranslatedText 
-            text={update.title} 
-            as="h3" 
-            className="text-blue-600 font-semibold text-sm md:text-base line-clamp-2 leading-tight pr-6 hover:underline" 
-          />
-        </Link>
+        <div className="flex items-start justify-between gap-2">
+          <Link to={`/update/${update.id}`} className="flex-1">
+            <TranslatedText 
+              text={update.title} 
+              as="h3" 
+              className="text-blue-600 font-semibold text-sm md:text-base line-clamp-2 leading-tight pr-6 hover:underline" 
+            />
+          </Link>
+          {!update.featured && (
+            <Link 
+              to={`/update/${update.id}`}
+              className="text-[10px] font-bold text-academic-gold whitespace-nowrap hover:underline flex items-center gap-0.5 mt-1"
+            >
+              {t('readMore')}
+            </Link>
+          )}
+        </div>
         <Link 
           to={`/?q=${encodeURIComponent(update.organization)}`}
           className="text-xs text-slate-500 mt-1 line-clamp-1 hover:text-academic-blue hover:underline"
