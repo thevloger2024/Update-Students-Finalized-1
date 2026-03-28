@@ -323,8 +323,11 @@ export function Header() {
                   try {
                     await signInWithGoogle();
                   } catch (error: any) {
+                    console.error("Login Error:", error);
                     if (error.code === 'auth/unauthorized-domain') {
                       toast.error("This domain is not authorized for login. Please add it in Firebase Console.");
+                    } else if (error.message) {
+                      toast.error(`Login failed: ${error.message}`);
                     } else {
                       toast.error("Failed to sign in. Please try again.");
                     }
