@@ -256,6 +256,10 @@ export function AdminPage() {
       // Prepare form data: handle numeric conversion and ensure optional fields are handled correctly
       const updateData = {
         ...form,
+        title: form.title.trim(),
+        category: form.category.trim(),
+        state: form.state.trim().toLowerCase(),
+        organization: form.organization.trim(),
         posts: form.posts ? Number(form.posts) : null,
         updatedAt: Date.now(),
       };
@@ -308,11 +312,33 @@ export function AdminPage() {
       steps: update.steps || [],
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast.info(t('editingUpdate'));
   };
 
-  const handleCancelEdit = () => {
+  const resetForm = () => {
     setEditingId(null);
     setForm(INITIAL_FORM);
+    toast.info(t('formReset'));
+  };
+
+  const handleDelete = (id: string) => {
+    setDeleteId(id);
+    setIsBatchDelete(false);
+    setShowDeleteConfirm(true);
+  };
+
+  const handleToggleFeatured = async (id: string, currentStatus: boolean) => {
+    try {
+      await updateDoc(doc(db, 'updates', id), {
+        featured: !currentStatus,
+        updatedAt: Date.now()
+      });
+      toast.success(!currentStatus ? t('markedFeatured') : t('removedFeatured'));
+      fetchUpdates();
+    } catch (error) {
+      console.error("Error toggling featured status:", error);
+      toast.error(t('failedUpdate'));
+    }
   };
 
   const compressImage = (file: File, maxWidth = 800, quality = 0.7): Promise<string> => {
@@ -508,24 +534,6 @@ export function AdminPage() {
     setForm(prev => ({ ...prev, steps: newSteps }));
   };
 
-  const handleDelete = (id: string) => {
-    setDeleteId(id);
-    setIsBatchDelete(false);
-    setShowDeleteConfirm(true);
-  };
-
-  const handleToggleFeatured = async (id: string, currentStatus: boolean) => {
-    try {
-      await updateDoc(doc(db, 'updates', id), {
-        featured: !currentStatus
-      });
-      toast.success(t(!currentStatus ? 'updateMarkedFeatured' : 'updateRemovedFeatured'));
-      fetchUpdates();
-    } catch (error) {
-      toast.error(t('failedUpdateFeatured'));
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -645,7 +653,7 @@ export function AdminPage() {
                 </h2>
                 {editingId && (
                   <button 
-                    onClick={handleCancelEdit}
+                    onClick={resetForm}
                     className="text-sm font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors"
                   >
                     <X size={16} />
@@ -655,6 +663,14 @@ export function AdminPage() {
               </div>
               
               <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-3">
+                  <AlertCircle size={20} className="text-academic-blue shrink-0 mt-0.5" />
+                  <div className="text-sm text-slate-600">
+                    <p className="font-bold text-academic-blue mb-1">{t('importantNote')}</p>
+                    <p>{t('adminStateNote')}</p>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">{t('title')}</label>
@@ -1282,21 +1298,218 @@ export function AdminPage() {
                   </div>
                 </div>
 
-                <button 
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full bg-academic-blue hover:bg-blue-800 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-100 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
-                >
-                  {submitting ? (
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      {editingId ? <Save size={20} /> : <CheckCircle size={20} />}
-                      <span>{editingId ? t('saveChanges') : t('publishUpdate')}</span>
-                    </>
-                  )}
-                </button>
+                  <div className="flex flex-wrap gap-4">
+                    <button 
+                      type="submit"
+                      disabled={submitting}
+                      className="flex-1 bg-academic-blue hover:bg-blue-800 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-100 flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {submitting ? (
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          {editingId ? <Save size={20} /> : <CheckCircle size={20} />}
+                          <span>{editingId ? t('saveChanges') : t('publishUpdate')}</span>
+                        </>
+                      )}
+                    </button>
+                    {editingId && (
+                      <button 
+                        type="button"
+                        onClick={resetForm}
+                        className="px-6 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-4 rounded-2xl transition-all active:scale-[0.98]"
+                      >
+                        {t('cancel')}
+                      </button>
+                    )}
+                  </div>
               </form>
+            </div>
+
+            {/* Updates List Section */}
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+              <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <LayoutDashboard size={20} className="text-academic-blue" />
+                    {t('manageUpdates')}
+                  </h2>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input 
+                        type="text"
+                        placeholder={t('searchUpdates')}
+                        className="pl-10 pr-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-academic-blue outline-none w-full md:w-64"
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    <select 
+                      className="px-4 py-2 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-academic-blue outline-none bg-white"
+                      value={filterType}
+                      onChange={e => setFilterType(e.target.value)}
+                    >
+                      <option value="all">{t('allTypes')}</option>
+                      <option value="job">{t('jobs')}</option>
+                      <option value="admit_card">{t('admitCard')}</option>
+                      <option value="result">{t('results')}</option>
+                      <option value="scholarship">{t('scholarships')}</option>
+                    </select>
+                  </div>
+                </div>
+                
+                {selectedIds.length > 0 && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-4 p-3 bg-red-50 border border-red-100 rounded-xl flex items-center justify-between"
+                  >
+                    <span className="text-sm font-bold text-red-700">
+                      {selectedIds.length} {t('itemsSelected')}
+                    </span>
+                    <button 
+                      onClick={handleBatchDelete}
+                      className="flex items-center gap-2 px-4 py-1.5 bg-red-600 text-white text-xs font-bold rounded-lg hover:bg-red-700 transition-all"
+                    >
+                      <Trash2 size={14} />
+                      {t('deleteSelected')}
+                    </button>
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-slate-50/50 border-b border-slate-100">
+                      <th className="px-6 py-4 w-10">
+                        <button onClick={toggleSelectAll} className="text-slate-400 hover:text-academic-blue transition-colors">
+                          {selectedIds.length === filteredAndSortedUpdates.length && filteredAndSortedUpdates.length > 0 
+                            ? <CheckSquare size={20} className="text-academic-blue" /> 
+                            : <Square size={20} />
+                          }
+                        </button>
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-academic-blue transition-colors" onClick={() => toggleSort('title')}>
+                        <div className="flex items-center gap-1">
+                          {t('title')}
+                          <ArrowUpDown size={12} className={sortField === 'title' ? "text-academic-blue" : "text-slate-300"} />
+                        </div>
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-academic-blue transition-colors" onClick={() => toggleSort('type')}>
+                        <div className="flex items-center gap-1">
+                          {t('type')}
+                          <ArrowUpDown size={12} className={sortField === 'type' ? "text-academic-blue" : "text-slate-300"} />
+                        </div>
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-academic-blue transition-colors" onClick={() => toggleSort('organization')}>
+                        <div className="flex items-center gap-1">
+                          {t('organization')}
+                          <ArrowUpDown size={12} className={sortField === 'organization' ? "text-academic-blue" : "text-slate-300"} />
+                        </div>
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer hover:text-academic-blue transition-colors" onClick={() => toggleSort('createdAt')}>
+                        <div className="flex items-center gap-1">
+                          {t('date')}
+                          <ArrowUpDown size={12} className={sortField === 'createdAt' ? "text-academic-blue" : "text-slate-300"} />
+                        </div>
+                      </th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">{t('actions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredAndSortedUpdates.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="px-6 py-12 text-center text-slate-400 italic">
+                          {t('noUpdatesFound')}
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredAndSortedUpdates.map((update) => (
+                        <tr key={update.id} className={`hover:bg-slate-50/50 transition-colors ${editingId === update.id ? 'bg-blue-50/30' : ''}`}>
+                          <td className="px-6 py-4">
+                            <button onClick={() => toggleSelect(update.id)} className="text-slate-400 hover:text-academic-blue transition-colors">
+                              {selectedIds.includes(update.id) 
+                                ? <CheckSquare size={20} className="text-academic-blue" /> 
+                                : <Square size={20} />
+                              }
+                            </button>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-3">
+                              {update.thumbnail && (
+                                <img src={update.thumbnail} alt="" className="w-10 h-10 rounded-lg object-cover border border-slate-200" />
+                              )}
+                              <div>
+                                <p className="font-bold text-slate-700 line-clamp-1">{update.title}</p>
+                                <div className="flex items-center gap-2">
+                                  {update.featured && (
+                                    <span className="flex items-center gap-0.5 text-[10px] font-bold text-academic-gold bg-yellow-50 px-1.5 py-0.5 rounded">
+                                      <Star size={10} fill="currentColor" />
+                                      {t('featured')}
+                                    </span>
+                                  )}
+                                  <span className="text-[10px] text-slate-400">{update.category}</span>
+                                  <span className="text-[10px] text-slate-400 bg-slate-100 px-1 rounded uppercase">{update.state}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full ${
+                              update.type === 'job' ? 'bg-blue-100 text-blue-700' :
+                              update.type === 'admit_card' ? 'bg-amber-100 text-amber-700' :
+                              update.type === 'result' ? 'bg-green-100 text-green-700' :
+                              'bg-purple-100 text-purple-700'
+                            }`}>
+                              {t(update.type)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-slate-600 text-sm">{update.organization}</td>
+                          <td className="px-6 py-4 text-slate-400 text-xs">
+                            {update.createdAt ? formatDate(update.createdAt) : 'N/A'}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <a 
+                                href={`/update/${update.id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-2 text-slate-400 hover:text-academic-blue transition-colors"
+                                title={t('viewOnSite')}
+                              >
+                                <ExternalLink size={18} />
+                              </a>
+                              <button 
+                                onClick={() => handleToggleFeatured(update.id, !!update.featured)}
+                                className={`p-2 transition-colors ${update.featured ? 'text-academic-gold hover:text-slate-400' : 'text-slate-300 hover:text-academic-gold'}`}
+                                title={update.featured ? t('removeFeatured') : t('markFeatured')}
+                              >
+                                <Star size={18} fill={update.featured ? "currentColor" : "none"} />
+                              </button>
+                              <button 
+                                onClick={() => handleEdit(update)}
+                                className="p-2 text-slate-400 hover:text-academic-blue transition-colors"
+                                title={t('edit')}
+                              >
+                                <Edit size={18} />
+                              </button>
+                              <button 
+                                onClick={() => handleDelete(update.id)}
+                                className="p-2 text-slate-400 hover:text-red-500 transition-colors"
+                                title={t('delete')}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
 
