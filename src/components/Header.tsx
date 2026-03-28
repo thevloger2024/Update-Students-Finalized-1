@@ -14,7 +14,7 @@ const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
 const TYPING_WORDS = [
   "RRB", "SSC", "UPSC", "BPSC", "QUIZ", "LATEST JOBS", 
-  "LATEST NEWS", "SCHOLARSHIPS", "ADMIT CARD", "RESULT NEET", "JEE"
+  "LATEST NEWS", "SCHOLARSHIPS", "ADMIT CARD", "RESULT NEET", "JEE", "UPDATES"
 ];
 
 export function Header() {
@@ -26,6 +26,7 @@ export function Header() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [isLangMenuOpen, setIsLangMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   const { language, setLanguage, t } = useLanguage();
   const navigate = useNavigate();
@@ -319,24 +320,41 @@ export function Header() {
               </div>
             ) : (
               <button 
+                disabled={isLoggingIn}
                 onClick={async () => {
+                  if (isLoggingIn) return;
+                  setIsLoggingIn(true);
+                  const toastId = toast.loading("Connecting to Google...");
+                  console.log("Login process started...");
+                  
                   try {
                     await signInWithGoogle();
+                    toast.dismiss(toastId);
+                    toast.success("Successfully signed in!");
                   } catch (error: any) {
-                    console.error("Login Error:", error);
+                    toast.dismiss(toastId);
+                    console.error("Login Error Details:", error);
+                    
                     if (error.code === 'auth/unauthorized-domain') {
-                      toast.error("This domain is not authorized for login. Please add it in Firebase Console.");
+                      toast.error("This domain is not authorized. Please add 'updatestudents-in.web.app' in Firebase Console > Auth > Settings > Authorized Domains.");
+                    } else if (error.code === 'auth/popup-blocked') {
+                      toast.error("Popup blocked! Please allow popups for this site in your browser settings.");
                     } else if (error.message) {
                       toast.error(`Login failed: ${error.message}`);
                     } else {
                       toast.error("Failed to sign in. Please try again.");
                     }
+                  } finally {
+                    setIsLoggingIn(false);
                   }
                 }}
-                className="flex items-center gap-2 text-sm font-medium text-white bg-academic-blue px-4 py-2 rounded-full hover:bg-blue-800 transition-all shadow-md btn-hover-effect"
+                className={cn(
+                  "flex items-center gap-2 text-sm font-medium text-white bg-academic-blue px-4 py-2 rounded-full hover:bg-blue-800 transition-all shadow-md btn-hover-effect",
+                  isLoggingIn && "opacity-70 cursor-not-allowed"
+                )}
               >
-                <LogIn size={16} />
-                <span>{t('login')}</span>
+                <LogIn size={16} className={cn(isLoggingIn && "animate-pulse")} />
+                <span>{isLoggingIn ? "Logging in..." : t('login')}</span>
               </button>
             )}
           </div>
