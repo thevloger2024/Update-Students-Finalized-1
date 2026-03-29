@@ -46,6 +46,10 @@
           "type": "number",
           "description": "Number of posts available."
         },
+        "syllabus": {
+          "type": "string",
+          "description": "Syllabus details for the job update."
+        },
         "description": {
           "type": "string",
           "description": "Detailed description of the update."

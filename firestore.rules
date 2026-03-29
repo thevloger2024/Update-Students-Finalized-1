@@ -20,6 +20,7 @@ service cloud.firestore {
     //   - releaseDate: string (optional, max 50 chars)
     //   - organization: string (required, max 100 chars)
     //   - posts: number (optional, >= 0)
+    //   - syllabus: string (optional, max 10000 chars)
     //   - description: string (required, max 5000 chars)
     //   - ageLimit: string (optional, max 500 chars)
     //   - officialUrl: string (optional, max 500 chars)
@@ -101,6 +102,7 @@ service cloud.firestore {
              isValidOptionalString('releaseDate', 1, 50) &&
              isValidOptionalString('ageLimit', 1, 500) &&
              isValidOptionalString('officialUrl', 1, 500) &&
+             isValidOptionalString('syllabus', 1, 10000) &&
              (!('requiredDocuments' in request.resource.data) || (request.resource.data.requiredDocuments is list && request.resource.data.requiredDocuments.size() <= 50)) &&
              (!('applicationFees' in request.resource.data) || (request.resource.data.applicationFees is list && request.resource.data.applicationFees.size() <= 20)) &&
              (!('postVacancies' in request.resource.data) || (request.resource.data.postVacancies is list && request.resource.data.postVacancies.size() <= 50)) &&
