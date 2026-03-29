@@ -32,6 +32,7 @@ interface UpdateForm {
   ageLimitNotice?: string;
   eligibilityNotice?: string;
   officialUrl?: string;
+  syllabus?: string;
   requiredDocuments: string[];
   applicationFees: ApplicationFee[];
   postVacancies: PostVacancy[];
@@ -59,6 +60,7 @@ const INITIAL_FORM: UpdateForm = {
   ageLimitNotice: '',
   eligibilityNotice: '',
   officialUrl: '',
+  syllabus: '',
   requiredDocuments: [],
   applicationFees: [],
   postVacancies: [],
@@ -147,6 +149,7 @@ export function AdminPage() {
           ageLimitNotice: data.ageLimitNotice || '',
           eligibilityNotice: data.eligibilityNotice || '',
           officialUrl: data.officialUrl || '',
+          syllabus: data.syllabus || '',
           requiredDocuments: data.requiredDocuments || [],
           applicationFees: data.applicationFees || [],
           postVacancies: data.postVacancies || [],
@@ -355,6 +358,7 @@ export function AdminPage() {
       ageLimitNotice: update.ageLimitNotice || '',
       eligibilityNotice: update.eligibilityNotice || '',
       officialUrl: update.officialUrl || '',
+      syllabus: update.syllabus || '',
       requiredDocuments: update.requiredDocuments || [],
       applicationFees: update.applicationFees || [],
       postVacancies: update.postVacancies || [],
@@ -985,6 +989,17 @@ export function AdminPage() {
                       onChange={e => setForm({...form, eligibilityNotice: e.target.value})}
                     />
                     <p className="text-[10px] text-slate-400 italic">This notice will appear in a green tray on the website.</p>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">Syllabus Details</label>
+                    <textarea 
+                      rows={4}
+                      placeholder="Enter syllabus details here (optional)..."
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all resize-none"
+                      value={form.syllabus || ''}
+                      onChange={e => setForm({...form, syllabus: e.target.value})}
+                    />
+                    <p className="text-[10px] text-slate-400 italic">Provide a detailed syllabus for the exam if applicable.</p>
                   </div>
                 </div>
 

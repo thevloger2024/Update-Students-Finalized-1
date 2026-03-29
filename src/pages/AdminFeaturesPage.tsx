@@ -21,6 +21,45 @@ export function AdminFeaturesPage() {
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteType, setDeleteType] = useState<'message' | 'update' | 'quiz' | 'feedback' | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!deleteId || !deleteType) return;
+    setDeleting(true);
+    try {
+      if (deleteType === 'message') {
+        await deleteDoc(doc(db, 'contact_messages', deleteId));
+        toast.success("Message deleted");
+      } else if (deleteType === 'update') {
+        await deleteDoc(doc(db, 'updates', deleteId));
+        toast.success("Update deleted successfully");
+      } else if (deleteType === 'quiz') {
+        await deleteDoc(doc(db, 'quizzes', deleteId));
+        toast.success(t('quizDeletedSuccess') || "Quiz deleted successfully");
+      } else if (deleteType === 'feedback') {
+        await deleteDoc(doc(db, 'feedback', deleteId));
+        toast.success("Feedback deleted successfully");
+      }
+    } catch (error) {
+      console.error(`Error deleting ${deleteType}:`, error);
+      toast.error(`Failed to delete ${deleteType}`);
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+      setDeleteId(null);
+      setDeleteType(null);
+    }
+  };
+
+  const handleDeleteRequest = (id: string, type: 'message' | 'update' | 'quiz' | 'feedback') => {
+    setDeleteId(id);
+    setDeleteType(type);
+    setShowDeleteConfirm(true);
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
@@ -96,45 +135,6 @@ export function AdminFeaturesPage() {
       </div>
     );
   }
-
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [deleteType, setDeleteType] = useState<'message' | 'update' | 'quiz' | 'feedback' | null>(null);
-  const [deleting, setDeleting] = useState(false);
-
-  const confirmDelete = async () => {
-    if (!deleteId || !deleteType) return;
-    setDeleting(true);
-    try {
-      if (deleteType === 'message') {
-        await deleteDoc(doc(db, 'contact_messages', deleteId));
-        toast.success("Message deleted");
-      } else if (deleteType === 'update') {
-        await deleteDoc(doc(db, 'updates', deleteId));
-        toast.success("Update deleted successfully");
-      } else if (deleteType === 'quiz') {
-        await deleteDoc(doc(db, 'quizzes', deleteId));
-        toast.success(t('quizDeletedSuccess') || "Quiz deleted successfully");
-      } else if (deleteType === 'feedback') {
-        await deleteDoc(doc(db, 'feedback', deleteId));
-        toast.success("Feedback deleted successfully");
-      }
-    } catch (error) {
-      console.error(`Error deleting ${deleteType}:`, error);
-      toast.error(`Failed to delete ${deleteType}`);
-    } finally {
-      setDeleting(false);
-      setShowDeleteConfirm(false);
-      setDeleteId(null);
-      setDeleteType(null);
-    }
-  };
-
-  const handleDeleteRequest = (id: string, type: 'message' | 'update' | 'quiz' | 'feedback') => {
-    setDeleteId(id);
-    setDeleteType(type);
-    setShowDeleteConfirm(true);
-  };
 
   const features = [
     {

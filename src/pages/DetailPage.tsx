@@ -4,7 +4,7 @@ import { Header } from '../components/Header';
 import { UpdateData, ApplicationFee, PostVacancy } from '../components/UpdateCard';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ArrowLeft, Calendar, Building2, Users, MapPin, Bookmark, Share2, ImageIcon, CheckCircle, AlertCircle, HelpCircle, Languages, Plus } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, Users, MapPin, Bookmark, Share2, ImageIcon, CheckCircle, AlertCircle, HelpCircle, Languages, Plus, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBookmarkContext } from '../contexts/BookmarkContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -61,6 +61,7 @@ export function DetailPage() {
     
     const translatedTitle = await translateContent(update.title, language);
     const translatedDesc = await translateContent(update.description, language);
+    const translatedSyllabus = update.syllabus ? await translateContent(update.syllabus, language) : undefined;
     
     let translatedDocs = undefined;
     if (update.requiredDocuments) {
@@ -102,6 +103,7 @@ export function DetailPage() {
     setTranslatedContent({
       title: translatedTitle,
       description: translatedDesc,
+      syllabus: translatedSyllabus,
       requiredDocuments: translatedDocs,
       applicationFees: translatedFees,
       postVacancies: translatedVacancies,
@@ -313,6 +315,20 @@ export function DetailPage() {
               </p>
             </div>
 
+            {(translatedContent?.syllabus || update.syllabus) && (
+              <div className="mb-12 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
+                  <span className="p-2 bg-blue-50 rounded-lg">
+                    <FileText size={24} />
+                  </span>
+                  Syllabus
+                </h2>
+                <div className="prose prose-slate max-w-none text-slate-700 whitespace-pre-wrap leading-relaxed">
+                  {translatedContent?.syllabus || update.syllabus}
+                </div>
+              </div>
+            )}
+
             {update.ageLimit && (
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 mb-8 shadow-sm">
                 <div className="flex flex-col lg:flex-row gap-8">
@@ -343,87 +359,99 @@ export function DetailPage() {
               </div>
             )}
 
-            {(translatedContent?.requiredDocuments || update.requiredDocuments) && (translatedContent?.requiredDocuments?.length || 0) > 0 && (
-              <div className="mb-12 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
-                  <span className="p-2 bg-blue-50 rounded-lg">
-                    <CheckCircle size={24} />
-                  </span>
-                  {t('requiredDocuments')}
-                </h2>
-                <ol className="list-decimal list-inside space-y-3">
-                  {(translatedContent?.requiredDocuments || update.requiredDocuments)?.map((doc, index) => (
-                    <li key={index} className="text-slate-700 font-medium pl-2 border-l-4 border-academic-blue/20 py-1">
-                      {doc}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            )}
-
-            {(translatedContent?.applicationFees || update.applicationFees) && (translatedContent?.applicationFees?.length || 0) > 0 && (
-              <div className="mb-12 bg-blue-50/50 border border-blue-100 rounded-2xl p-6 shadow-sm">
-                <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
-                  <span className="p-2 bg-blue-100 rounded-lg">
-                    <Plus size={24} />
-                  </span>
-                  {t('applicationFee')}
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {(translatedContent?.applicationFees || update.applicationFees)?.map((item, index) => (
-                    <div key={index} className="bg-white p-4 rounded-xl border border-blue-100 flex justify-between items-center shadow-sm">
-                      <span className="font-bold text-slate-600">{item.category}</span>
-                      <span className="text-academic-blue font-black text-lg">{item.fee}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {(translatedContent?.postVacancies || update.postVacancies) && (translatedContent?.postVacancies?.length || 0) > 0 && (
-              <div className="mb-12 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-                  <h2 className="text-2xl font-bold text-academic-blue flex items-center gap-2">
+            {(() => {
+              const docs = translatedContent?.requiredDocuments || update.requiredDocuments;
+              if (!docs || docs.length === 0) return null;
+              return (
+                <div className="mb-12 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                  <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
                     <span className="p-2 bg-blue-50 rounded-lg">
-                      <Users size={24} />
+                      <CheckCircle size={24} />
                     </span>
-                    {t('postVacancies')}
+                    {t('requiredDocuments')}
                   </h2>
+                  <ol className="list-decimal list-inside space-y-3">
+                    {docs.map((doc, index) => (
+                      <li key={index} className="text-slate-700 font-medium pl-2 border-l-4 border-academic-blue/20 py-1">
+                        {doc}
+                      </li>
+                    ))}
+                  </ol>
                 </div>
-                <div className="hidden sm:block overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50/50">
-                        <th className="px-6 py-4 text-sm font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">{t('postName')}</th>
-                        <th className="px-6 py-4 text-sm font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 text-right">{t('vacancies')}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {(translatedContent?.postVacancies || update.postVacancies)?.map((item, index) => (
-                        <tr key={index} className="hover:bg-slate-50/30 transition-colors">
-                          <td className="px-6 py-4 text-slate-700 font-medium">{item.postName}</td>
-                          <td className="px-6 py-4 text-right">
-                            <span className="inline-block bg-blue-50 text-academic-blue font-bold px-3 py-1 rounded-full text-sm">
-                              {item.count}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              );
+            })()}
+
+            {(() => {
+              const fees = translatedContent?.applicationFees || update.applicationFees;
+              if (!fees || fees.length === 0) return null;
+              return (
+                <div className="mb-12 bg-blue-50/50 border border-blue-100 rounded-2xl p-6 shadow-sm">
+                  <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
+                    <span className="p-2 bg-blue-100 rounded-lg">
+                      <Plus size={24} />
+                    </span>
+                    {t('applicationFee')}
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {fees.map((item, index) => (
+                      <div key={index} className="bg-white p-4 rounded-xl border border-blue-100 flex justify-between items-center shadow-sm">
+                        <span className="font-bold text-slate-600">{item.category}</span>
+                        <span className="text-academic-blue font-black text-lg">{item.fee}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div className="sm:hidden divide-y divide-slate-100">
-                  {(translatedContent?.postVacancies || update.postVacancies)?.map((item, index) => (
-                    <div key={index} className="px-6 py-4 flex justify-between items-center">
-                      <span className="text-slate-700 font-medium">{item.postName}</span>
-                      <span className="bg-blue-50 text-academic-blue font-bold px-3 py-1 rounded-full text-sm">
-                        {item.count}
+              );
+            })()}
+
+            {(() => {
+              const vacancies = translatedContent?.postVacancies || update.postVacancies;
+              if (!vacancies || vacancies.length === 0) return null;
+              return (
+                <div className="mb-12 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                    <h2 className="text-2xl font-bold text-academic-blue flex items-center gap-2">
+                      <span className="p-2 bg-blue-50 rounded-lg">
+                        <Users size={24} />
                       </span>
-                    </div>
-                  ))}
+                      {t('postVacancies')}
+                    </h2>
+                  </div>
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-slate-50/50">
+                          <th className="px-6 py-4 text-sm font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">{t('postName')}</th>
+                          <th className="px-6 py-4 text-sm font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100 text-right">{t('vacancies')}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {vacancies.map((item, index) => (
+                          <tr key={index} className="hover:bg-slate-50/30 transition-colors">
+                            <td className="px-6 py-4 text-slate-700 font-medium">{item.postName}</td>
+                            <td className="px-6 py-4 text-right">
+                              <span className="inline-block bg-blue-50 text-academic-blue font-bold px-3 py-1 rounded-full text-sm">
+                                {item.count}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="sm:hidden divide-y divide-slate-100">
+                    {vacancies.map((item, index) => (
+                      <div key={index} className="px-6 py-4 flex justify-between items-center">
+                        <span className="text-slate-700 font-medium">{item.postName}</span>
+                        <span className="bg-blue-50 text-academic-blue font-bold px-3 py-1 rounded-full text-sm">
+                          {item.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="mt-8 mb-12 pt-6 border-t border-slate-200 flex justify-center">
                {update.officialUrl ? (
@@ -445,46 +473,50 @@ export function DetailPage() {
                )}
             </div>
 
-            {(translatedContent?.steps || update.steps) && (translatedContent?.steps?.length || 0) > 0 && (
-              <div className="mb-12">
-                <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
-                  <span className="p-2 bg-blue-50 rounded-lg">
-                    <ImageIcon size={24} />
-                  </span>
-                  {t('stepByStep')}
-                </h2>
-                
-                <div className="space-y-0 relative">
-                  {/* Vertical line that spans all steps */}
-                  <div className="absolute left-[15px] top-4 bottom-4 w-0.5 bg-slate-100 hidden md:block"></div>
+            {(() => {
+              const steps = translatedContent?.steps || update.steps;
+              if (!steps || steps.length === 0) return null;
+              return (
+                <div className="mb-12">
+                  <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
+                    <span className="p-2 bg-blue-50 rounded-lg">
+                      <ImageIcon size={24} />
+                    </span>
+                    {t('stepByStep')}
+                  </h2>
                   
-                  {(translatedContent?.steps || update.steps)?.map((step, index) => (
-                    <div key={index} className="relative pl-0 md:pl-12 pb-12 last:pb-0">
-                      <div className="absolute left-0 md:left-[0px] top-0 w-8 h-8 bg-academic-blue text-white rounded-full flex items-center justify-center font-bold shadow-md z-10">
-                        {index + 1}
-                      </div>
-                      
-                      <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 shadow-sm ml-10 md:ml-0">
-                        <p className="text-slate-700 leading-relaxed mb-6 font-medium">
-                          {step.text}
-                        </p>
+                  <div className="space-y-0 relative">
+                    {/* Vertical line that spans all steps */}
+                    <div className="absolute left-[15px] top-4 bottom-4 w-0.5 bg-slate-100 hidden md:block"></div>
+                    
+                    {steps.map((step, index) => (
+                      <div key={index} className="relative pl-0 md:pl-12 pb-12 last:pb-0">
+                        <div className="absolute left-0 md:left-[0px] top-0 w-8 h-8 bg-academic-blue text-white rounded-full flex items-center justify-center font-bold shadow-md z-10">
+                          {index + 1}
+                        </div>
                         
-                        {step.image && (
-                          <div className="rounded-xl overflow-hidden border border-slate-200 shadow-lg bg-white">
-                            <img 
-                              src={step.image} 
-                              alt={`Step ${index + 1}`} 
-                              className="w-full h-auto"
-                              referrerPolicy="no-referrer"
-                            />
-                          </div>
-                        )}
+                        <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 shadow-sm ml-10 md:ml-0">
+                          <p className="text-slate-700 leading-relaxed mb-6 font-medium">
+                            {step.text}
+                          </p>
+                          
+                          {step.image && (
+                            <div className="rounded-xl overflow-hidden border border-slate-200 shadow-lg bg-white">
+                              <img 
+                                src={step.image} 
+                                alt={`Step ${index + 1}`} 
+                                className="w-full h-auto"
+                                referrerPolicy="no-referrer"
+                              />
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <div className="mt-12 p-6 bg-slate-100 rounded-2xl border border-slate-200">
               <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">

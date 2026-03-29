@@ -35,6 +35,7 @@ export interface UpdateData {
   ageLimitNotice?: string;
   eligibilityNotice?: string;
   officialUrl?: string;
+  syllabus?: string;
   requiredDocuments?: string[];
   applicationFees?: ApplicationFee[];
   postVacancies?: PostVacancy[];
