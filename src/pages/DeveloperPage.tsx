@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Github, Twitter, Instagram, Youtube, Facebook, MessageCircle, Globe, Code, Cpu, Sparkles, Share2 } from 'lucide-react';
+import { Github, Twitter, Instagram, Youtube, Facebook, MessageCircle, Globe, Code, Cpu, Sparkles, Share2, Linkedin, Send, Mail, User, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { db } from '../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, addDoc } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 interface DeveloperProfile {
   name: string;
@@ -21,6 +22,7 @@ interface DeveloperProfile {
     facebook?: string;
     instagram?: string;
     huggingface?: string;
+    linkedin?: string;
   };
 }
 
@@ -28,6 +30,13 @@ export function DeveloperPage() {
   const { t } = useLanguage();
   const [profile, setProfile] = useState<DeveloperProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -54,9 +63,34 @@ export function DeveloperPage() {
     { icon: Facebook, label: "Facebook", color: "bg-blue-600", url: profile?.socials?.facebook || "#" },
     { icon: Instagram, label: "Instagram", color: "bg-pink-600", url: profile?.socials?.instagram || "#" },
     { icon: Sparkles, label: "Hugging Face", color: "bg-yellow-500", url: profile?.socials?.huggingface || "#" },
+    { icon: Linkedin, label: "LinkedIn", color: "bg-blue-700", url: profile?.socials?.linkedin || "#" },
   ].filter(social => social.url !== "#" && social.url !== "");
 
   const skills = profile?.skills?.length ? profile.skills : ["React", "TypeScript", "Firebase", "Tailwind CSS", "Node.js", "Python", "AI/ML"];
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!contactForm.name || !contactForm.email || !contactForm.message) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await addDoc(collection(db, 'contact_messages'), {
+        ...contactForm,
+        createdAt: Date.now(),
+        status: 'new'
+      });
+      toast.success("Message sent successfully! I'll get back to you soon.");
+      setContactForm({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message. Please try again later.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -141,6 +175,92 @@ export function DeveloperPage() {
                       </a>
                     );
                   })}
+                </div>
+              </div>
+
+              <div className="pt-16 mt-12 border-t border-slate-100">
+                <div className="max-w-2xl mx-auto">
+                  <div className="text-center mb-10">
+                    <h3 className="text-2xl font-serif font-bold text-academic-blue mb-2">Get In Touch</h3>
+                    <p className="text-slate-500">Have a question or want to collaborate? Send me a message!</p>
+                  </div>
+
+                  <form onSubmit={handleContactSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                          <User size={14} />
+                          Full Name
+                        </label>
+                        <input 
+                          type="text"
+                          required
+                          value={contactForm.name}
+                          onChange={e => setContactForm({...contactForm, name: e.target.value})}
+                          placeholder="Your Name"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                          <Mail size={14} />
+                          Email Address
+                        </label>
+                        <input 
+                          type="email"
+                          required
+                          value={contactForm.email}
+                          onChange={e => setContactForm({...contactForm, email: e.target.value})}
+                          placeholder="your@email.com"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        <MessageSquare size={14} />
+                        Subject
+                      </label>
+                      <input 
+                        type="text"
+                        value={contactForm.subject}
+                        onChange={e => setContactForm({...contactForm, subject: e.target.value})}
+                        placeholder="What is this about?"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        <MessageCircle size={14} />
+                        Message
+                      </label>
+                      <textarea 
+                        required
+                        rows={5}
+                        value={contactForm.message}
+                        onChange={e => setContactForm({...contactForm, message: e.target.value})}
+                        placeholder="Your message here..."
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all resize-none"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="w-full bg-academic-blue text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-800 transition-all shadow-lg hover:shadow-xl disabled:opacity-50"
+                    >
+                      {submitting ? (
+                        <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      ) : (
+                        <>
+                          <Send size={20} />
+                          <span>Send Message</span>
+                        </>
+                      )}
+                    </button>
+                  </form>
                 </div>
               </div>
             </div>

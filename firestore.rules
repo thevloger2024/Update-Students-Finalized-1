@@ -43,6 +43,16 @@ service cloud.firestore {
     //   - displayName: string (required, max 100 chars)
     //   - url: string (required, max 500 chars)
     //
+    // Collection: contact_messages
+    // Document ID: auto-generated
+    // Fields:
+    //   - name: string (required, max 100 chars)
+    //   - email: string (required, max 100 chars)
+    //   - subject: string (optional, max 200 chars)
+    //   - message: string (required, max 5000 chars)
+    //   - createdAt: number (required)
+    //   - status: string (optional, 'new' | 'read' | 'replied')
+    //
     // ===============================================================
 
     // Helper Functions
@@ -208,6 +218,16 @@ service cloud.firestore {
     match /site_settings/{documentId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /contact_messages/{messageId} {
+      allow create: if hasRequiredFields(['name', 'email', 'message', 'createdAt']) &&
+                     validStringLength('name', 1, 100) &&
+                     isValidEmail(request.resource.data.email) &&
+                     isValidOptionalString('subject', 1, 200) &&
+                     validStringLength('message', 1, 5000) &&
+                     request.resource.data.createdAt is number;
+      allow read, update, delete: if isAdmin();
     }
   }
 }

@@ -212,6 +212,45 @@
       },
       "required": ["platform", "displayName", "url"]
     },
+    "DeveloperProfile": {
+      "title": "DeveloperProfile",
+      "description": "Content for the Meet the Developer page.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "bio": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "socials": {
+          "type": "object",
+          "properties": {
+            "whatsapp": { "type": "string" },
+            "youtube": { "type": "string" },
+            "github": { "type": "string" },
+            "twitter": { "type": "string" },
+            "facebook": { "type": "string" },
+            "instagram": { "type": "string" },
+            "huggingface": { "type": "string" },
+            "linkedin": { "type": "string" }
+          }
+        }
+      }
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "A message sent by a user to the developer.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "status": { "type": "string", "enum": ["new", "read", "replied"] }
+      },
+      "required": ["name", "email", "message", "createdAt"]
+    },
     "User": {
       "title": "User",
       "description": "A user of the platform.",
@@ -280,6 +319,18 @@
         "$ref": "#/entities/UserPreferences"
       },
       "description": "User's general preferences."
+    },
+    "site_settings": {
+      "schema": {
+        "$ref": "#/entities/DeveloperProfile"
+      },
+      "description": "Global site settings and content."
+    },
+    "contact_messages": {
+      "schema": {
+        "$ref": "#/entities/ContactMessage"
+      },
+      "description": "Messages sent to the developer."
     }
   }
 }

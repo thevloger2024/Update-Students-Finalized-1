@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '../components/Header';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, onSnapshot, limit, updateDoc, getDocs, deleteDoc, orderBy } from 'firebase/firestore';
 import { GoogleGenAI } from '@google/genai';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle } from 'lucide-react';
+import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle, Linkedin, Mail, CheckCircle2, Clock, ExternalLink, UserCheck, UserMinus, ShieldAlert, Send, MessageSquare, User as UserIcon } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from '../components/TranslatedText';
 import { signInWithGoogle, logOut } from '../firebase';
@@ -16,7 +16,7 @@ const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
 export function AdminFeaturesPage() {
   const { t } = useLanguage();
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -145,6 +145,14 @@ export function AdminFeaturesPage() {
       icon: UserCircle,
       color: "bg-green-50 text-green-600",
       status: "Active"
+    },
+    {
+      id: 'messages',
+      title: "Contact Messages",
+      description: "Read and manage messages sent from the Meet the Developer page.",
+      icon: Mail,
+      color: "bg-red-50 text-red-600",
+      status: "Active"
     }
   ];
 
@@ -174,6 +182,8 @@ export function AdminFeaturesPage() {
 
         {activeFeature === 'developer' ? (
           <DeveloperProfileEditor />
+        ) : activeFeature === 'messages' ? (
+          <MessageManager />
         ) : activeFeature === 'quiz' ? (
           <AdminQuizManager />
         ) : activeFeature === 'content' ? (
@@ -231,6 +241,126 @@ export function AdminFeaturesPage() {
   );
 }
 
+function MessageManager() {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'contact_messages'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setMessages(msgs);
+      setLoading(false);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.GET, 'contact_messages');
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this message?")) return;
+    try {
+      await deleteDoc(doc(db, 'contact_messages', id));
+      toast.success("Message deleted");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `contact_messages/${id}`);
+    }
+  };
+
+  const toggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'read' ? 'new' : 'read';
+    try {
+      await updateDoc(doc(db, 'contact_messages', id), { status: newStatus });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `contact_messages/${id}`);
+    }
+  };
+
+  if (loading) return <div className="py-12 text-center text-slate-500">Loading messages...</div>;
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8"
+    >
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-slate-800">Contact Messages</h2>
+        <p className="text-slate-500">View and manage messages from the Meet the Developer page.</p>
+      </div>
+
+      <div className="space-y-4">
+        {messages.length === 0 ? (
+          <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+            <Mail size={48} className="mx-auto text-slate-300 mb-4" />
+            <p className="text-slate-500">No messages yet.</p>
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <div 
+              key={msg.id} 
+              className={`p-6 rounded-2xl border transition-all ${msg.status === 'new' ? 'bg-blue-50/30 border-blue-100 shadow-sm' : 'bg-white border-slate-100'}`}
+            >
+              <div className="flex flex-wrap justify-between items-start gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${msg.status === 'new' ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-500'}`}>
+                    <UserIcon size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800">{msg.name}</h4>
+                    <p className="text-sm text-slate-500 flex items-center gap-1.5">
+                      <Mail size={12} />
+                      {msg.email}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-400 flex items-center gap-1">
+                    <Clock size={12} />
+                    {new Date(msg.createdAt).toLocaleString()}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button 
+                      onClick={() => toggleStatus(msg.id, msg.status)}
+                      className={`p-2 rounded-lg transition-colors ${msg.status === 'new' ? 'text-blue-600 hover:bg-blue-100' : 'text-slate-400 hover:bg-slate-100'}`}
+                      title={msg.status === 'new' ? "Mark as read" : "Mark as unread"}
+                    >
+                      {msg.status === 'new' ? <Mail size={18} /> : <CheckCircle2 size={18} />}
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(msg.id)}
+                      className="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete message"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {msg.subject && (
+                <div className="mb-2">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Subject</span>
+                  <p className="text-sm font-semibold text-slate-700">{msg.subject}</p>
+                </div>
+              )}
+              
+              <div>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Message</span>
+                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap mt-1">{msg.message}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
 function DeveloperProfileEditor() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -249,7 +379,8 @@ function DeveloperProfileEditor() {
       twitter: '',
       facebook: '',
       instagram: '',
-      huggingface: ''
+      huggingface: '',
+      linkedin: ''
     }
   });
 
@@ -273,7 +404,8 @@ function DeveloperProfileEditor() {
               twitter: data.socials?.twitter || '',
               facebook: data.socials?.facebook || '',
               instagram: data.socials?.instagram || '',
-              huggingface: data.socials?.huggingface || ''
+              huggingface: data.socials?.huggingface || '',
+              linkedin: data.socials?.linkedin || ''
             }
           });
         }

@@ -448,29 +448,41 @@ export function AdminPage() {
       const base64Data = baseImage.split(',')[1];
       const mimeType = baseImage.split(';')[0].split(':')[1];
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [
-            {
-              inlineData: {
-                data: base64Data,
-                mimeType: mimeType,
+      const prompts = [
+        'Generate a variation of this thumbnail with a different color palette but keeping the same professional theme.',
+        'Generate a variation of this thumbnail with a more modern and minimalist layout.',
+        'Generate a variation of this thumbnail with more vibrant and energetic visual elements.'
+      ];
+
+      const results = await Promise.all(prompts.map(prompt => 
+        ai.models.generateContent({
+          model: 'gemini-2.5-flash-image',
+          contents: {
+            parts: [
+              {
+                inlineData: {
+                  data: base64Data,
+                  mimeType: mimeType,
+                },
               },
-            },
-            {
-              text: 'Generate 3 high-quality variations of this thumbnail for an educational/job update portal. The variations should be professional, clean, and visually appealing. Return only the images.',
-            },
-          ],
-        },
-      });
+              {
+                text: prompt,
+              },
+            ],
+          },
+        })
+      ));
 
       const newThumbnails: string[] = [];
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          newThumbnails.push(`data:image/png;base64,${part.inlineData.data}`);
+      results.forEach(response => {
+        if (response.candidates?.[0]?.content?.parts) {
+          for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+              newThumbnails.push(`data:image/png;base64,${part.inlineData.data}`);
+            }
+          }
         }
-      }
+      });
       
       if (newThumbnails.length > 0) {
         setGeneratedThumbnails(newThumbnails);
@@ -502,26 +514,37 @@ export function AdminPage() {
 
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `Generate a professional thumbnail for a ${form.category} update titled "${form.title}". The design should be clean, modern, and suitable for an educational or job portal. Use professional colors and clear typography if applicable.`;
+      
+      const prompts = [
+        `Generate a professional thumbnail for a ${form.category} update titled "${form.title}". Style: Modern, clean, and corporate.`,
+        `Generate a professional thumbnail for a ${form.category} update titled "${form.title}". Style: Vibrant, energetic, and eye-catching.`,
+        `Generate a professional thumbnail for a ${form.category} update titled "${form.title}". Style: Minimalist, elegant, and academic.`
+      ];
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: [{ text: prompt }],
-        },
-        config: {
-          imageConfig: {
-            aspectRatio: "16:9",
+      const results = await Promise.all(prompts.map(prompt => 
+        ai.models.generateContent({
+          model: 'gemini-2.5-flash-image',
+          contents: {
+            parts: [{ text: prompt }],
+          },
+          config: {
+            imageConfig: {
+              aspectRatio: "16:9",
+            }
+          }
+        })
+      ));
+
+      const newThumbnails: string[] = [];
+      results.forEach(response => {
+        if (response.candidates?.[0]?.content?.parts) {
+          for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData) {
+              newThumbnails.push(`data:image/png;base64,${part.inlineData.data}`);
+            }
           }
         }
       });
-
-      const newThumbnails: string[] = [];
-      for (const part of response.candidates[0].content.parts) {
-        if (part.inlineData) {
-          newThumbnails.push(`data:image/png;base64,${part.inlineData.data}`);
-        }
-      }
 
       if (newThumbnails.length > 0) {
         setGeneratedThumbnails(newThumbnails);
