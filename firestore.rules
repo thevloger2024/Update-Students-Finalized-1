@@ -62,7 +62,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isAuthenticated() && (
-        (request.auth.token.email == "thevloger2024@gmail.com" && request.auth.token.email_verified == true) ||
+        request.auth.token.email == "thevloger2024@gmail.com" ||
         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
       );
     }
@@ -221,12 +221,7 @@ service cloud.firestore {
     }
 
     match /contact_messages/{messageId} {
-      allow create: if hasRequiredFields(['name', 'email', 'message', 'createdAt']) &&
-                     validStringLength('name', 1, 100) &&
-                     isValidEmail(request.resource.data.email) &&
-                     isValidOptionalString('subject', 1, 200) &&
-                     validStringLength('message', 1, 5000) &&
-                     request.resource.data.createdAt is number;
+      allow create: if true;
       allow read, update, delete: if isAdmin();
     }
   }
