@@ -8,6 +8,7 @@ import { ArrowLeft, Calendar, Building2, Users, MapPin, Bookmark, Share2, ImageI
 import { motion, AnimatePresence } from 'framer-motion';
 import { useBookmarkContext } from '../contexts/BookmarkContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { toast } from 'sonner';
 import { useTranslationService } from '../hooks/useTranslationService';
 import { cn, formatDate } from '../contexts/utils';
 import { TranslatedText } from '../components/TranslatedText';
@@ -48,7 +49,7 @@ export function DetailPage() {
       // Fallback: Copy to clipboard
       try {
         await navigator.clipboard.writeText(shareData.url);
-        alert('Link copied to clipboard!');
+        toast.success(t('linkCopied') || 'Link copied to clipboard!');
       } catch (err) {
         console.error('Failed to copy:', err);
       }
@@ -436,7 +437,7 @@ export function DetailPage() {
                  </a>
                ) : (
                  <button 
-                   onClick={() => alert('Please check the official website of the organization for the notice.')}
+                   onClick={() => toast.info(t('checkOfficialNotice') || 'Please check the official website of the organization for the notice.')}
                    className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-12 rounded-full shadow-lg shadow-red-100 transition-all hover:scale-105 active:scale-95 text-lg"
                  >
                    {t('applyNow')}

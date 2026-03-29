@@ -82,6 +82,7 @@ export function AdminPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isBatchDelete, setIsBatchDelete] = useState(false);
+  const [deleteType, setDeleteType] = useState<'update' | 'social'>('update');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedThumbnails, setGeneratedThumbnails] = useState<string[]>([]);
   const [form, setForm] = useState<UpdateForm>(INITIAL_FORM);
@@ -206,15 +207,11 @@ export function AdminPage() {
     }
   };
 
-  const deleteSocialLink = async (id: string) => {
-    if (!confirm(t('confirmDeleteSocial'))) return;
-    try {
-      await deleteDoc(doc(db, 'social_links', id));
-      toast.success(t('socialLinkDeleted'));
-      fetchSocialLinks();
-    } catch (error) {
-      toast.error(t('failedDeleteSocialLink'));
-    }
+  const deleteSocialLink = (id: string) => {
+    setDeleteId(id);
+    setIsBatchDelete(false);
+    setDeleteType('social');
+    setShowDeleteConfirm(true);
   };
 
   const filteredAndSortedUpdates = updates
@@ -278,10 +275,16 @@ export function AdminPage() {
         toast.success(t('batchDeleteSuccess').replace('{count}', selectedIds.length.toString()));
         setSelectedIds([]);
       } else if (deleteId) {
-        await deleteDoc(doc(db, 'updates', deleteId));
-        toast.success(t('updateDeleted'));
+        const collectionName = deleteType === 'social' ? 'social_links' : 'updates';
+        await deleteDoc(doc(db, collectionName, deleteId));
+        toast.success(deleteType === 'social' ? t('socialLinkDeleted') : t('updateDeleted'));
       }
-      fetchUpdates();
+      
+      if (deleteType === 'social') {
+        fetchSocialLinks();
+      } else {
+        fetchUpdates();
+      }
     } catch (error) {
       console.error("Error deleting:", error);
       toast.error(t('failedDelete'));
@@ -328,7 +331,7 @@ export function AdminPage() {
       fetchUpdates();
     } catch (error) {
       console.error("Error publishing update:", error);
-      toast.error(t('failedPublish'));
+      handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, editingId ? `updates/${editingId}` : 'updates');
     } finally {
       setSubmitting(false);
     }

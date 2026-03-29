@@ -5,12 +5,12 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, onSnapshot, limit, updateDoc, getDocs, deleteDoc, orderBy } from 'firebase/firestore';
 import { GoogleGenAI } from '@google/genai';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle, Linkedin, Mail, CheckCircle2, Clock, ExternalLink, UserCheck, UserMinus, ShieldAlert, Send, MessageSquare, User as UserIcon } from 'lucide-react';
+import { toast } from 'sonner';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from '../components/TranslatedText';
 import { signInWithGoogle, logOut } from '../firebase';
-import { toast } from 'sonner';
 
 const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
@@ -96,6 +96,45 @@ export function AdminFeaturesPage() {
       </div>
     );
   }
+
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteType, setDeleteType] = useState<'message' | 'update' | 'quiz' | 'feedback' | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDelete = async () => {
+    if (!deleteId || !deleteType) return;
+    setDeleting(true);
+    try {
+      if (deleteType === 'message') {
+        await deleteDoc(doc(db, 'contact_messages', deleteId));
+        toast.success("Message deleted");
+      } else if (deleteType === 'update') {
+        await deleteDoc(doc(db, 'updates', deleteId));
+        toast.success("Update deleted successfully");
+      } else if (deleteType === 'quiz') {
+        await deleteDoc(doc(db, 'quizzes', deleteId));
+        toast.success(t('quizDeletedSuccess') || "Quiz deleted successfully");
+      } else if (deleteType === 'feedback') {
+        await deleteDoc(doc(db, 'feedback', deleteId));
+        toast.success("Feedback deleted successfully");
+      }
+    } catch (error) {
+      console.error(`Error deleting ${deleteType}:`, error);
+      toast.error(`Failed to delete ${deleteType}`);
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+      setDeleteId(null);
+      setDeleteType(null);
+    }
+  };
+
+  const handleDeleteRequest = (id: string, type: 'message' | 'update' | 'quiz' | 'feedback') => {
+    setDeleteId(id);
+    setDeleteType(type);
+    setShowDeleteConfirm(true);
+  };
 
   const features = [
     {
@@ -183,13 +222,13 @@ export function AdminFeaturesPage() {
         {activeFeature === 'developer' ? (
           <DeveloperProfileEditor />
         ) : activeFeature === 'messages' ? (
-          <MessageManager />
+          <MessageManager onDelete={handleDeleteRequest} />
         ) : activeFeature === 'quiz' ? (
-          <AdminQuizManager />
+          <AdminQuizManager onDelete={handleDeleteRequest} />
         ) : activeFeature === 'content' ? (
-          <ContentModerationManager />
+          <ContentModerationManager onDelete={handleDeleteRequest} />
         ) : activeFeature === 'feedback' ? (
-          <FeedbackManager />
+          <FeedbackManager onDelete={handleDeleteRequest} />
         ) : activeFeature === 'users' ? (
           <UserManager />
         ) : activeFeature === 'system' ? (
@@ -237,11 +276,65 @@ export function AdminFeaturesPage() {
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 -ml-16 -mb-16 rounded-full" />
         </div>
       </main>
+      {/* Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDeleteConfirm(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white rounded-3xl shadow-2xl border border-slate-200 max-w-md w-full overflow-hidden"
+            >
+              <div className="p-8 text-center">
+                <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Trash2 size={40} />
+                </div>
+                <h3 className="text-2xl font-serif font-bold text-slate-800 mb-2">{t('confirmDelete') || 'Confirm Delete'}</h3>
+                <p className="text-slate-500 mb-8">
+                  Are you sure you want to delete this {deleteType}? This action cannot be undone.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeleteId(null);
+                      setDeleteType(null);
+                    }}
+                    className="flex-1 px-6 py-3 bg-slate-100 text-slate-600 font-bold rounded-2xl hover:bg-slate-200 transition-all"
+                  >
+                    {t('cancel') || 'Cancel'}
+                  </button>
+                  <button
+                    onClick={confirmDelete}
+                    disabled={deleting}
+                    className="flex-1 px-6 py-3 bg-red-600 text-white font-bold rounded-2xl hover:bg-red-700 shadow-lg shadow-red-100 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {deleting ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <Trash2 size={18} />
+                    )}
+                    {t('deleteNow') || 'Delete Now'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function MessageManager() {
+function MessageManager({ onDelete }: { onDelete: (id: string, type: 'message' | 'update' | 'quiz' | 'feedback') => void }) {
   const [messages, setMessages] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -261,14 +354,8 @@ function MessageManager() {
     return () => unsubscribe();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this message?")) return;
-    try {
-      await deleteDoc(doc(db, 'contact_messages', id));
-      toast.success("Message deleted");
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `contact_messages/${id}`);
-    }
+  const handleDelete = (id: string) => {
+    onDelete(id, 'message');
   };
 
   const toggleStatus = async (id: string, currentStatus: string) => {
@@ -590,7 +677,7 @@ function DeveloperProfileEditor() {
   );
 }
 
-function AdminQuizManager() {
+function AdminQuizManager({ onDelete }: { onDelete: (id: string, type: 'message' | 'update' | 'quiz' | 'feedback') => void }) {
   const { t } = useLanguage();
   const [organizations, setOrganizations] = useState<string[]>([]);
   const [quizType, setQuizType] = useState<'exam' | 'current_affairs'>('exam');
@@ -631,15 +718,8 @@ function AdminQuizManager() {
     fetchExistingQuizzes();
   }, []);
 
-  const handleDeleteQuiz = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'quizzes', id));
-      setExistingQuizzes(prev => prev.filter(q => q.id !== id));
-      toast.success(t('quizDeletedSuccess') || "Quiz deleted successfully");
-    } catch (error) {
-      console.error("Error deleting quiz:", error);
-      toast.error("Failed to delete quiz");
-    }
+  const handleDeleteQuiz = (id: string) => {
+    onDelete(id, 'quiz');
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -836,7 +916,7 @@ function AdminQuizManager() {
   );
 }
 
-function ContentModerationManager() {
+function ContentModerationManager({ onDelete }: { onDelete: (id: string, type: 'message' | 'update' | 'quiz' | 'feedback') => void }) {
   const { t } = useLanguage();
   const [updates, setUpdates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -861,16 +941,8 @@ function ContentModerationManager() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this update?")) return;
-    try {
-      await deleteDoc(doc(db, 'updates', id));
-      setUpdates(prev => prev.filter(u => u.id !== id));
-      toast.success("Update deleted successfully");
-    } catch (error) {
-      console.error("Error deleting update:", error);
-      toast.error("Failed to delete update");
-    }
+  const handleDelete = (id: string) => {
+    onDelete(id, 'update');
   };
 
   const filteredUpdates = updates.filter(u => 
@@ -951,7 +1023,7 @@ function ContentModerationManager() {
   );
 }
 
-function FeedbackManager() {
+function FeedbackManager({ onDelete }: { onDelete: (id: string, type: 'message' | 'update' | 'quiz' | 'feedback') => void }) {
   const { t } = useLanguage();
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -974,15 +1046,8 @@ function FeedbackManager() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteDoc(doc(db, 'feedback', id));
-      setFeedbacks(prev => prev.filter(f => f.id !== id));
-      toast.success("Feedback deleted successfully");
-    } catch (error) {
-      console.error("Error deleting feedback:", error);
-      toast.error("Failed to delete feedback");
-    }
+  const handleDelete = (id: string) => {
+    onDelete(id, 'feedback');
   };
 
   if (loading) {
