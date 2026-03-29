@@ -228,6 +228,7 @@ export function Home() {
   const results = filteredUpdates.filter((u) => u.type === 'result');
   const scholarships = filteredUpdates.filter((u) => u.type === 'scholarship');
   const featuredUpdates = filteredUpdates.filter((u) => u.featured);
+  const latestUpdates = filteredUpdates.slice(0, 8);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -368,6 +369,58 @@ export function Home() {
                           </motion.div>
                         </div>
                         <FeaturedUpdates updates={featuredUpdates} />
+
+                        {latestUpdates.length > 0 && (
+                          <section className="w-full max-w-7xl mx-auto px-4 py-12">
+                            <div className="bg-white rounded-[2rem] p-8 shadow-xl shadow-blue-100/50 border border-blue-50 relative overflow-hidden">
+                              <div className="absolute top-0 right-0 w-64 h-64 bg-academic-blue/5 rounded-full -mr-32 -mt-32 blur-3xl"></div>
+                              <div className="absolute bottom-0 left-0 w-64 h-64 bg-academic-gold/5 rounded-full -ml-32 -mb-32 blur-3xl"></div>
+                              
+                              <div className="relative z-10">
+                                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+                                  <div className="space-y-2">
+                                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-academic-blue/10 text-academic-blue rounded-full text-xs font-bold uppercase tracking-wider">
+                                      <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-academic-blue opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-academic-blue"></span>
+                                      </span>
+                                      {t('new')}
+                                    </div>
+                                    <h2 className="text-3xl md:text-4xl font-serif font-bold text-academic-blue leading-tight">
+                                      {t('latestUpdates')}
+                                    </h2>
+                                    <p className="text-slate-500 max-w-xl font-medium">
+                                      {t('latestUpdatesDesc')}
+                                    </p>
+                                  </div>
+                                  <button 
+                                    onClick={() => {
+                                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                                      setSelectedCategory(null);
+                                    }}
+                                    className="group flex items-center gap-2 text-academic-blue font-bold hover:text-blue-800 transition-colors bg-blue-50 px-6 py-3 rounded-xl"
+                                  >
+                                    {t('viewAll')}
+                                    <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                                  </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                                  {latestUpdates.map((update, idx) => (
+                                    <motion.div
+                                      key={update.id}
+                                      initial={{ opacity: 0, y: 20 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={{ delay: idx * 0.1 }}
+                                    >
+                                      <UpdateCard update={update} />
+                                    </motion.div>
+                                  ))}
+                                </div>
+                              </div>
+                            </div>
+                          </section>
+                        )}
                       </>
                     )}
                     <UpdateSection title={t('latestJobs')} type="job" updates={latestJobs} />

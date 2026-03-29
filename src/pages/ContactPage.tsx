@@ -2,10 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Mail, MessageCircle, Facebook, Twitter, Instagram, Youtube, MapPin, Phone, Github, Share2 } from 'lucide-react';
+import { Mail, MessageCircle, Facebook, Twitter, Instagram, Youtube, MapPin, Phone, Github, Share2, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, addDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
+import { toast } from 'sonner';
 
 interface SocialLink {
   id: string;
@@ -17,6 +18,13 @@ interface SocialLink {
 export function ContactPage() {
   const { t } = useLanguage();
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    subject: '',
+    message: ''
+  });
 
   useEffect(() => {
     const q = query(collection(db, 'social_links'), orderBy('platform', 'asc'));
@@ -28,6 +36,29 @@ export function ContactPage() {
     });
     return () => unsubscribe();
   }, []);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.email || !formData.message) {
+      toast.error("Please fill in all required fields.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await addDoc(collection(db, 'contact_messages'), {
+        ...formData,
+        createdAt: Date.now(),
+        status: 'new'
+      });
+      toast.success("Message sent successfully!");
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, 'contact_messages');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const getIcon = (platform: string) => {
     switch (platform) {
@@ -122,13 +153,16 @@ export function ContactPage() {
 
               <div className="p-12">
                 <h2 className="text-2xl font-serif font-bold text-academic-blue mb-8">Send us a Message</h2>
-                <form className="space-y-6">
+                <form className="space-y-6" onSubmit={handleContactSubmit}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-sm font-bold text-slate-700">Full Name</label>
                       <input 
                         type="text" 
                         placeholder="John Doe"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
                       />
                     </div>
@@ -137,6 +171,9 @@ export function ContactPage() {
                       <input 
                         type="email" 
                         placeholder="john@example.com"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
                       />
                     </div>
@@ -146,6 +183,8 @@ export function ContactPage() {
                     <input 
                       type="text" 
                       placeholder="How can we help?"
+                      value={formData.subject}
+                      onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
                     />
                   </div>
@@ -154,11 +193,25 @@ export function ContactPage() {
                     <textarea 
                       rows={5}
                       placeholder="Your message here..."
+                      required
+                      value={formData.message}
+                      onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all resize-none"
                     ></textarea>
                   </div>
-                  <button className="w-full py-4 bg-academic-blue text-white font-bold rounded-xl hover:bg-blue-800 transition-all shadow-lg shadow-blue-200">
-                    Send Message
+                  <button 
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full py-4 bg-academic-blue text-white font-bold rounded-xl hover:bg-blue-800 transition-all shadow-lg shadow-blue-200 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 size={20} className="animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      'Send Message'
+                    )}
                   </button>
                 </form>
               </div>

@@ -17,6 +17,8 @@ const initialTranslations: Record<string, Record<string, string>> = {
   en: {
     home: "Home",
     latestJobs: "Latest Jobs",
+    latestUpdates: "Latest Updates",
+    latestUpdatesDesc: "The very latest notifications across all categories",
     admitCard: "Admit Card",
     results: "Results",
     scholarships: "Scholarships",
@@ -343,6 +345,8 @@ const initialTranslations: Record<string, Record<string, string>> = {
   hi: {
     home: "होम",
     latestJobs: "नवीनतम नौकरियां",
+    latestUpdates: "नवीनतम अपडेट",
+    latestUpdatesDesc: "सभी श्रेणियों में सबसे ताज़ा सूचनाएं",
     admitCard: "प्रवेश पत्र",
     results: "परिणाम",
     scholarships: "छात्रवृत्ति",
