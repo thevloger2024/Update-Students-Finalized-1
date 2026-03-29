@@ -123,19 +123,21 @@ export function DeveloperPage() {
 
               <div className="pt-12 border-t border-slate-100">
                 <h3 className="text-center font-bold text-slate-800 mb-8 uppercase tracking-widest text-sm">Connect with Me</h3>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="flex flex-wrap justify-center gap-4">
                   {developerSocials.map((social, index) => {
                     const Icon = social.icon;
                     return (
                       <a 
                         key={index}
                         href={social.url}
-                        className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all group"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex flex-col items-center gap-3 p-4 sm:p-6 rounded-2xl bg-slate-50 border border-slate-100 hover:shadow-lg hover:-translate-y-1 transition-all group min-w-[120px] sm:min-w-[140px]"
                       >
-                        <div className={`w-12 h-12 ${social.color} text-white rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
-                          <Icon size={24} />
+                        <div className={`w-10 h-10 sm:w-12 sm:h-12 ${social.color} text-white rounded-xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform`}>
+                          <Icon size={20} className="sm:w-6 sm:h-6" />
                         </div>
-                        <span className="text-xs font-bold text-slate-600">{social.label}</span>
+                        <span className="text-[10px] sm:text-xs font-bold text-slate-600">{social.label}</span>
                       </a>
                     );
                   })}

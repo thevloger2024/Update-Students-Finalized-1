@@ -41,16 +41,27 @@ export function QuizPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchQuizzes = async () => {
+    const fetchQuizzesAndOrgs = async () => {
       try {
-        const snapshot = await getDocs(collection(db, 'quizzes'));
+        const [quizSnapshot, updateSnapshot] = await Promise.all([
+          getDocs(collection(db, 'quizzes')),
+          getDocs(collection(db, 'updates'))
+        ]);
+
         const fetchedQuizzes: Quiz[] = [];
         const orgsSet = new Set<string>();
         
-        snapshot.forEach(doc => {
+        quizSnapshot.forEach(doc => {
           const data = doc.data() as Omit<Quiz, 'id'>;
           fetchedQuizzes.push({ id: doc.id, ...data });
           if (data.organization && data.organization !== 'Current Affairs' && data.type !== 'current_affairs') {
+            orgsSet.add(data.organization);
+          }
+        });
+
+        updateSnapshot.forEach(doc => {
+          const data = doc.data();
+          if (data.organization) {
             orgsSet.add(data.organization);
           }
         });
@@ -58,13 +69,13 @@ export function QuizPage() {
         setQuizzes(fetchedQuizzes);
         setOrganizations(Array.from(orgsSet).sort());
       } catch (error) {
-        console.error("Error fetching quizzes:", error);
+        console.error("Error fetching quizzes or updates:", error);
         toast.error("Failed to load quizzes.");
       } finally {
         setLoading(false);
       }
     };
-    fetchQuizzes();
+    fetchQuizzesAndOrgs();
   }, []);
 
   useEffect(() => {

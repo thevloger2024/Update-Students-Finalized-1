@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { UpdateData, ApplicationFee, PostVacancy } from '../components/UpdateCard';
-import { collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs, deleteDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, limit, getDocs, deleteDoc, doc, updateDoc, writeBatch, getDoc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { Plus, Trash2, Users, LayoutDashboard, Briefcase, FileText, CheckCircle, Save, AlertCircle, Search, Filter, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Lock, LogIn, LogOut, Settings, Shield, Star, CheckSquare, Square, Edit, X, Image as ImageIcon, PlusCircle, MinusCircle, Upload, ChevronRight, ChevronDown, Eye, Sparkles, Share2 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signInWithGoogle, logOut } from '../firebase';
@@ -103,6 +103,7 @@ export function AdminPage() {
   const [editingSocialId, setEditingSocialId] = useState<string | null>(null);
   
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -110,11 +111,56 @@ export function AdminPage() {
       if (currentUser && currentUser.email === ADMIN_EMAIL) {
         fetchUpdates();
         fetchSocialLinks();
+        
+        // Check for edit query param
+        const params = new URLSearchParams(window.location.search);
+        const editId = params.get('edit');
+        if (editId) {
+          handleEditById(editId);
+        }
       }
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  const handleEditById = async (id: string) => {
+    try {
+      const docRef = doc(db, 'updates', id);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setForm({
+          title: data.title || '',
+          type: data.type || 'job',
+          category: data.category || '',
+          state: data.state || '',
+          organization: data.organization || '',
+          description: data.description || '',
+          startDate: data.startDate || '',
+          endDate: data.endDate || '',
+          updateDate: data.updateDate || '',
+          releaseDate: data.releaseDate || '',
+          posts: data.posts,
+          ageLimit: data.ageLimit || '',
+          ageLimitNotice: data.ageLimitNotice || '',
+          eligibilityNotice: data.eligibilityNotice || '',
+          officialUrl: data.officialUrl || '',
+          requiredDocuments: data.requiredDocuments || [],
+          applicationFees: data.applicationFees || [],
+          postVacancies: data.postVacancies || [],
+          featured: data.featured || false,
+          thumbnail: data.thumbnail || '',
+          steps: data.steps || [],
+        });
+        setEditingId(id);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (error) {
+      console.error("Error fetching update for edit:", error);
+      toast.error("Failed to load update for editing");
+    }
+  };
 
   const fetchUpdates = async () => {
     try {

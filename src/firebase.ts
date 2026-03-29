@@ -1,21 +1,36 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
+import { toast } from 'sonner';
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
+// Set persistence to local to ensure session is saved
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error("Error setting auth persistence:", error);
+});
+
 export const signInWithGoogle = async () => {
   console.log("Calling signInWithPopup...");
   try {
+    // Force account selection
+    googleProvider.setCustomParameters({ prompt: 'select_account' });
     const result = await signInWithPopup(auth, googleProvider);
     console.log("SignIn Success:", result.user.email);
     return result;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error signing in with Google", error);
+    if (error.code === 'auth/popup-blocked') {
+      toast.error("Popup blocked! Please allow popups for this site.");
+    } else if (error.code === 'auth/unauthorized-domain') {
+      toast.error("This domain is not authorized in Firebase console.");
+    } else {
+      toast.error(`Login failed: ${error.message}`);
+    }
     throw error;
   }
 };

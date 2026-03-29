@@ -5,7 +5,7 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2 } from 'lucide-react';
+import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from '../components/TranslatedText';
 import { signInWithGoogle, logOut } from '../firebase';
@@ -105,6 +105,14 @@ export function AdminFeaturesPage() {
       status: t('comingSoon')
     },
     {
+      id: 'feedback',
+      title: t('userFeedback') || 'User Feedback',
+      description: t('userFeedbackDesc') || 'Manage and respond to user feedback and issues.',
+      icon: MessageCircle,
+      color: "bg-amber-50 text-amber-600",
+      status: "Active"
+    },
+    {
       id: 'content',
       title: t('contentModeration'),
       description: t('contentModerationDesc'),
@@ -168,6 +176,8 @@ export function AdminFeaturesPage() {
           <AdminQuizManager />
         ) : activeFeature === 'content' ? (
           <ContentModerationManager />
+        ) : activeFeature === 'feedback' ? (
+          <FeedbackManager />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => {
@@ -692,6 +702,121 @@ function AdminQuizManager() {
 }
 
 function ContentModerationManager() {
+  const { t } = useLanguage();
+  const [updates, setUpdates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchUpdates();
+  }, []);
+
+  const fetchUpdates = async () => {
+    try {
+      const q = query(collection(db, 'updates'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setUpdates(data);
+    } catch (error) {
+      console.error("Error fetching updates:", error);
+      toast.error("Failed to load updates");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("Are you sure you want to delete this update?")) return;
+    try {
+      await deleteDoc(doc(db, 'updates', id));
+      setUpdates(prev => prev.filter(u => u.id !== id));
+      toast.success("Update deleted successfully");
+    } catch (error) {
+      console.error("Error deleting update:", error);
+      toast.error("Failed to delete update");
+    }
+  };
+
+  const filteredUpdates = updates.filter(u => 
+    u.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.organization?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    u.type?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) {
+    return <div className="py-12 text-center text-slate-500">Loading updates...</div>;
+  }
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8"
+    >
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
+            <Database size={24} />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">{t('contentModeration')}</h2>
+            <p className="text-slate-500">Edit or delete published job updates and content.</p>
+          </div>
+        </div>
+        <div className="relative w-full md:w-64">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search updates..."
+            className="w-full pl-4 pr-10 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue/20 outline-none"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        {filteredUpdates.length === 0 ? (
+          <p className="text-slate-500 text-center py-8">No updates found.</p>
+        ) : (
+          filteredUpdates.map(update => (
+            <div key={update.id} className="p-4 border border-slate-200 rounded-2xl flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center hover:bg-slate-50 transition-colors">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase rounded-full bg-blue-100 text-blue-700">
+                    {update.type}
+                  </span>
+                  <span className="text-xs text-slate-500">
+                    {new Date(update.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+                <h4 className="text-slate-800 font-bold">{update.title}</h4>
+                <p className="text-sm text-slate-500">{update.organization}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => navigate(`/admin?edit=${update.id}`)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-bold transition-all"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(update.id)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                  title="Delete Update"
+                >
+                  <Trash2 size={20} />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function FeedbackManager() {
   const { t } = useLanguage();
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
