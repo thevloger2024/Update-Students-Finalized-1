@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '../components/Header';
-import { auth, db } from '../firebase';
+import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, onSnapshot, limit, updateDoc, getDocs, deleteDoc, orderBy } from 'firebase/firestore';
 import { GoogleGenAI } from '@google/genai';
@@ -926,6 +926,11 @@ function UserManager() {
     }, (error) => {
       console.error("Error fetching users:", error);
       setLoading(false);
+      try {
+        handleFirestoreError(error, OperationType.GET, 'users');
+      } catch (e) {
+        // Error already logged by handleFirestoreError
+      }
     });
     return () => unsubscribe();
   }, []);

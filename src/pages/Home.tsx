@@ -7,7 +7,7 @@ import { UpdateSection } from '../components/UpdateSection';
 import { FeaturedUpdates } from '../components/FeaturedUpdates';
 import { UpdateCard, UpdateData } from '../components/UpdateCard';
 import { UpdateCardSkeleton } from '../components/UpdateCardSkeleton';
-import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { StatePromptModal } from '../components/StatePromptModal';
@@ -46,9 +46,31 @@ export function Home() {
 
   // Listen for auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
+        // Ensure user document exists
+        try {
+          const userDocRef = doc(db, 'users', currentUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+          if (!userDocSnap.exists()) {
+            await setDoc(userDocRef, {
+              email: currentUser.email,
+              displayName: currentUser.displayName,
+              role: currentUser.email === 'thevloger2024@gmail.com' ? 'admin' : 'user',
+              createdAt: Date.now(),
+              lastLogin: Date.now()
+            });
+          } else {
+            // Update last login
+            await updateDoc(userDocRef, {
+              lastLogin: Date.now()
+            });
+          }
+        } catch (error) {
+          console.error("Error sync user document:", error);
+        }
+        
         loadUserPreference(currentUser.uid);
       }
     });

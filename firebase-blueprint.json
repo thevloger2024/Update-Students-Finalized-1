@@ -211,6 +211,31 @@
         }
       },
       "required": ["platform", "displayName", "url"]
+    },
+    "User": {
+      "title": "User",
+      "description": "A user of the platform.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "The user's email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"],
+          "description": "The user's role."
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp of account creation."
+        }
+      },
+      "required": ["email", "role"]
     }
   },
   "firestore": {
@@ -231,6 +256,12 @@
         "$ref": "#/entities/SocialLink"
       },
       "description": "Collection of social media links for the footer and contact pages."
+    },
+    "users": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Collection of user profiles."
     },
     "users/{userId}/bookmarks": {
       "schema": {
