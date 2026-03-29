@@ -90,8 +90,6 @@ export function PrivacyPage() {
           </motion.div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

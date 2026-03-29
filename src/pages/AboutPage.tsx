@@ -84,8 +84,6 @@ export function AboutPage() {
           </motion.div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

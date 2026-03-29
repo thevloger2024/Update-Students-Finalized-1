@@ -166,8 +166,6 @@ export function ContactPage() {
           </motion.div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

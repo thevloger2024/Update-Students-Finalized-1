@@ -147,8 +147,6 @@ export function DeveloperPage() {
           </motion.div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 }

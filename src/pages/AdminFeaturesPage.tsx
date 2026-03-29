@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '../components/Header';
 import { auth, db } from '../firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, query, onSnapshot, limit, updateDoc, getDocs, deleteDoc, orderBy } from 'firebase/firestore';
+import { GoogleGenAI } from '@google/genai';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle } from 'lucide-react';
@@ -98,11 +99,12 @@ export function AdminFeaturesPage() {
 
   const features = [
     {
+      id: 'users',
       title: t('userManagement'),
       description: t('userManagementDesc'),
       icon: Users,
       color: "bg-purple-50 text-purple-600",
-      status: t('comingSoon')
+      status: "Active"
     },
     {
       id: 'feedback',
@@ -126,7 +128,7 @@ export function AdminFeaturesPage() {
       description: t('systemSettingsDesc'),
       icon: Settings,
       color: "bg-orange-50 text-orange-600",
-      status: t('comingSoon')
+      status: "Active"
     },
     {
       id: 'quiz',
@@ -178,6 +180,10 @@ export function AdminFeaturesPage() {
           <ContentModerationManager />
         ) : activeFeature === 'feedback' ? (
           <FeedbackManager />
+        ) : activeFeature === 'users' ? (
+          <UserManager />
+        ) : activeFeature === 'system' ? (
+          <SystemSettingsManager />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => {
@@ -451,9 +457,6 @@ function DeveloperProfileEditor() {
     </motion.div>
   );
 }
-
-import { collection, getDocs, deleteDoc, query, orderBy } from 'firebase/firestore';
-import { GoogleGenAI } from '@google/genai';
 
 function AdminQuizManager() {
   const { t } = useLanguage();
@@ -904,6 +907,230 @@ function FeedbackManager() {
             </div>
           ))
         )}
+      </div>
+    </motion.div>
+  );
+}
+
+function UserManager() {
+  const { t } = useLanguage();
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const q = query(collection(db, 'users'), limit(50));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const usersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setUsers(usersData);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching users:", error);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleToggleAdmin = async (userId: string, currentRole: string) => {
+    try {
+      const newRole = currentRole === 'admin' ? 'user' : 'admin';
+      await updateDoc(doc(db, 'users', userId), { role: newRole });
+      toast.success(`User role updated to ${newRole}`);
+    } catch (error) {
+      toast.error("Failed to update user role");
+    }
+  };
+
+  if (loading) {
+    return <div className="py-12 text-center text-slate-500">Loading users...</div>;
+  }
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8"
+    >
+      <div className="flex items-center gap-4 mb-8">
+        <div className="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600">
+          <Users size={24} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">{t('userManagement')}</h2>
+          <p className="text-slate-500">{t('userManagementDesc')}</p>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-slate-100">
+              <th className="py-4 px-4 font-bold text-slate-700">User</th>
+              <th className="py-4 px-4 font-bold text-slate-700">Email</th>
+              <th className="py-4 px-4 font-bold text-slate-700">Role</th>
+              <th className="py-4 px-4 font-bold text-slate-700 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="py-8 text-center text-slate-500">No users found in the database.</td>
+              </tr>
+            ) : (
+              users.map(user => (
+                <tr key={user.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 font-bold">
+                        {user.displayName?.[0] || user.email?.[0] || '?'}
+                      </div>
+                      <span className="font-medium text-slate-800">{user.displayName || 'Anonymous'}</span>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4 text-slate-500">{user.email || 'No email'}</td>
+                  <td className="py-4 px-4">
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold uppercase ${
+                      user.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {user.role || 'user'}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4 text-right">
+                    <button
+                      onClick={() => handleToggleAdmin(user.id, user.role)}
+                      className="text-sm font-bold text-academic-blue hover:underline"
+                    >
+                      {user.role === 'admin' ? 'Demote to User' : 'Make Admin'}
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+    </motion.div>
+  );
+}
+
+function SystemSettingsManager() {
+  const { t } = useLanguage();
+  const [settings, setSettings] = useState({
+    siteName: 'Update Students',
+    maintenanceMode: false,
+    contactEmail: 'support@updatestudents.com',
+    allowRegistration: true
+  });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const docRef = doc(db, 'site_settings', 'general');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setSettings(docSnap.data() as any);
+        }
+      } catch (error) {
+        console.error("Error fetching settings:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await setDoc(doc(db, 'site_settings', 'general'), settings);
+      toast.success("Settings saved successfully");
+    } catch (error) {
+      toast.error("Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="py-12 text-center text-slate-500">Loading settings...</div>;
+  }
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8"
+    >
+      <div className="flex items-center gap-4 mb-8">
+        <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600">
+          <Settings size={24} />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">{t('systemSettings')}</h2>
+          <p className="text-slate-500">{t('systemSettingsDesc')}</p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700">Site Name</label>
+            <input 
+              type="text" 
+              value={settings.siteName}
+              onChange={(e) => setSettings({...settings, siteName: e.target.value})}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700">Contact Email</label>
+            <input 
+              type="email" 
+              value={settings.contactEmail}
+              onChange={(e) => setSettings({...settings, contactEmail: e.target.value})}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-6">
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <div>
+              <p className="font-bold text-slate-800">Maintenance Mode</p>
+              <p className="text-xs text-slate-500">Disable the site for public users</p>
+            </div>
+            <button 
+              onClick={() => setSettings({...settings, maintenanceMode: !settings.maintenanceMode})}
+              className={`w-12 h-6 rounded-full transition-colors relative ${settings.maintenanceMode ? 'bg-orange-500' : 'bg-slate-300'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.maintenanceMode ? 'left-7' : 'left-1'}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+            <div>
+              <p className="font-bold text-slate-800">Allow Registration</p>
+              <p className="text-xs text-slate-500">Enable new user signups</p>
+            </div>
+            <button 
+              onClick={() => setSettings({...settings, allowRegistration: !settings.allowRegistration})}
+              className={`w-12 h-6 rounded-full transition-colors relative ${settings.allowRegistration ? 'bg-green-500' : 'bg-slate-300'}`}
+            >
+              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.allowRegistration ? 'left-7' : 'left-1'}`} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="px-8 py-3 bg-academic-blue text-white font-bold rounded-xl hover:bg-blue-800 transition-all disabled:opacity-50 flex items-center gap-2"
+        >
+          {saving ? 'Saving...' : 'Save Settings'}
+        </button>
       </div>
     </motion.div>
   );
