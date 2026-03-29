@@ -312,6 +312,36 @@ export function DetailPage() {
               </p>
             </div>
 
+            {update.ageLimit && (
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 mb-8 shadow-sm">
+                <div className="flex flex-col lg:flex-row gap-8">
+                  <div className="flex-1">
+                    <h3 className="text-xl font-bold text-academic-blue mb-4 flex items-center gap-2">
+                      <Users size={24} />
+                      {t('ageLimit')}
+                    </h3>
+                    <div className="bg-white p-4 rounded-xl border border-blue-100 mb-4">
+                      <p className="text-slate-700 font-bold text-lg">
+                        <TranslatedText text={update.ageLimit} />
+                      </p>
+                    </div>
+                    {update.ageLimitNotice && (
+                      <div className="flex items-start gap-2 text-slate-500 bg-blue-100/50 p-3 rounded-lg border border-blue-100">
+                        <Calendar size={16} className="mt-0.5 shrink-0" />
+                        <p className="text-xs italic">
+                          {t('ageCutoffNote').replace('{date}', formatDate(update.ageLimitNotice))}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="lg:w-96 shrink-0">
+                    <AgeChecker update={update} />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {(translatedContent?.requiredDocuments || update.requiredDocuments) && (translatedContent?.requiredDocuments?.length || 0) > 0 && (
               <div className="mb-12 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                 <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
@@ -394,6 +424,26 @@ export function DetailPage() {
               </div>
             )}
 
+            <div className="mt-8 mb-12 pt-6 border-t border-slate-200 flex justify-center">
+               {update.officialUrl ? (
+                 <a 
+                   href={update.officialUrl} 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-12 rounded-full shadow-lg shadow-red-100 transition-all hover:scale-105 active:scale-95 inline-block text-center text-lg"
+                 >
+                   {t('applyNow')}
+                 </a>
+               ) : (
+                 <button 
+                   onClick={() => alert('Please check the official website of the organization for the notice.')}
+                   className="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-12 rounded-full shadow-lg shadow-red-100 transition-all hover:scale-105 active:scale-95 text-lg"
+                 >
+                   {t('applyNow')}
+                 </button>
+               )}
+            </div>
+
             {(translatedContent?.steps || update.steps) && (translatedContent?.steps?.length || 0) > 0 && (
               <div className="mb-12">
                 <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
@@ -434,56 +484,6 @@ export function DetailPage() {
                 </div>
               </div>
             )}
-
-            {update.ageLimit && (
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 mb-8 shadow-sm">
-                <div className="flex flex-col lg:flex-row gap-8">
-                  <div className="flex-1">
-                    <h3 className="text-xl font-bold text-academic-blue mb-4 flex items-center gap-2">
-                      <Users size={24} />
-                      {t('ageLimit')}
-                    </h3>
-                    <div className="bg-white p-4 rounded-xl border border-blue-100 mb-4">
-                      <p className="text-slate-700 font-bold text-lg">
-                        <TranslatedText text={update.ageLimit} />
-                      </p>
-                    </div>
-                    {update.ageLimitNotice && (
-                      <div className="flex items-start gap-2 text-slate-500 bg-blue-100/50 p-3 rounded-lg border border-blue-100">
-                        <Calendar size={16} className="mt-0.5 shrink-0" />
-                        <p className="text-xs italic">
-                          {t('ageCutoffNote').replace('{date}', formatDate(update.ageLimitNotice))}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="lg:w-96 shrink-0">
-                    <AgeChecker update={update} />
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div className="mt-8 pt-6 border-t border-slate-200 flex justify-center">
-               {update.officialUrl ? (
-                 <a 
-                   href={update.officialUrl} 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full shadow-md transition-transform hover:scale-105 active:scale-95 inline-block text-center"
-                 >
-                   {t('applyNow')}
-                 </a>
-               ) : (
-                 <button 
-                   onClick={() => alert('Please check the official website of the organization for the notice.')}
-                   className="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full shadow-md transition-transform hover:scale-105 active:scale-95"
-                 >
-                   {t('applyNow')}
-                 </button>
-               )}
-            </div>
 
             <div className="mt-12 p-6 bg-slate-100 rounded-2xl border border-slate-200">
               <h3 className="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
