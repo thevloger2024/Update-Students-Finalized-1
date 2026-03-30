@@ -64,6 +64,8 @@ function AnimatedRoutes() {
   );
 }
 
+import { MaintenanceGuard } from './components/MaintenanceGuard';
+
 export default function App() {
   return (
     <LanguageProvider>
@@ -71,9 +73,11 @@ export default function App() {
         <Toaster position="top-center" richColors />
         <Router>
           <Suspense fallback={<LoadingFallback />}>
-            <AnimatedRoutes />
-            <Footer />
-            <ScrollToTop />
+            <MaintenanceGuard>
+              <AnimatedRoutes />
+              <Footer />
+              <ScrollToTop />
+            </MaintenanceGuard>
           </Suspense>
         </Router>
       </BookmarkProvider>
