@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, BrainCircuit, CheckCircle2, XCircle, Clock, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { TranslatedText } from '../components/TranslatedText';
 import { useLanguage } from '../contexts/LanguageContext';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { toast } from 'sonner';
 
@@ -12,6 +12,7 @@ interface Question {
   question: string;
   options: string[];
   correctIndex: number;
+  explanation?: string;
 }
 
 interface Quiz {
@@ -35,9 +36,7 @@ export function QuizPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<number, number>>({});
   const [quizStarted, setQuizStarted] = useState(false);
-  const [quizFinished, setQuizFinished] = useState(false);
   const [startTime, setStartTime] = useState<number>(0);
-  const [timeTaken, setTimeTaken] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -111,7 +110,6 @@ export function QuizPage() {
     if (quiz) {
       setActiveQuiz(quiz);
       setQuizStarted(true);
-      setQuizFinished(false);
       setCurrentQuestionIndex(0);
       setSelectedAnswers({});
       setStartTime(Date.now());
@@ -121,7 +119,6 @@ export function QuizPage() {
   };
 
   const handleAnswerSelect = (optionIndex: number) => {
-    if (quizFinished) return;
     setSelectedAnswers(prev => ({
       ...prev,
       [currentQuestionIndex]: optionIndex
@@ -134,9 +131,37 @@ export function QuizPage() {
     }
   };
 
-  const handleSubmitQuiz = () => {
-    setQuizFinished(true);
-    setTimeTaken(Math.floor((Date.now() - startTime) / 1000));
+  const handleSubmitQuiz = async () => {
+    const finalTimeTaken = Math.floor((Date.now() - startTime) / 1000);
+    const score = calculateScore();
+    
+    // Save to history if logged in
+    if (auth.currentUser && activeQuiz) {
+      try {
+        await addDoc(collection(db, `users/${auth.currentUser.uid}/quiz_history`), {
+          quizId: activeQuiz.id,
+          quizTitle: activeQuiz.title || activeQuiz.organization || 'Quiz',
+          organization: activeQuiz.organization || '',
+          year: activeQuiz.year || '',
+          score: score,
+          totalQuestions: activeQuiz.questions.length,
+          timeTaken: finalTimeTaken,
+          answers: selectedAnswers,
+          createdAt: Date.now()
+        });
+      } catch (error) {
+        console.error("Error saving quiz result:", error);
+      }
+    }
+
+    navigate('/quiz/result', {
+      state: {
+        quiz: activeQuiz,
+        answers: selectedAnswers,
+        timeTaken: finalTimeTaken,
+        score: score
+      }
+    });
   };
 
   const calculateScore = () => {
@@ -258,107 +283,6 @@ export function QuizPage() {
               >
                 <BrainCircuit size={20} />
                 <span>{t('startQuiz')}</span>
-              </button>
-            </div>
-          </motion.div>
-        ) : quizFinished ? (
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-3xl shadow-sm border border-slate-200 p-8"
-          >
-            <div className="text-center mb-8">
-              <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 size={48} />
-              </div>
-              <h2 className="text-3xl font-serif font-bold text-slate-800 mb-2">Quiz Completed!</h2>
-              <p className="text-slate-500">{activeQuiz?.organization} - {activeQuiz?.year}</p>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
-              <div className="bg-slate-50 p-4 rounded-2xl text-center border border-slate-100">
-                <p className="text-sm text-slate-500 mb-1">{t('score')}</p>
-                <p className="text-2xl font-bold text-slate-800">{calculateScore()} / {activeQuiz?.questions.length}</p>
-              </div>
-              <div className="bg-slate-50 p-4 rounded-2xl text-center border border-slate-100">
-                <p className="text-sm text-slate-500 mb-1">{t('timeTaken')}</p>
-                <p className="text-2xl font-bold text-slate-800">{formatTime(timeTaken)}</p>
-              </div>
-              <div className="bg-green-50 p-4 rounded-2xl text-center border border-green-100">
-                <p className="text-sm text-green-600 mb-1">{t('correct')}</p>
-                <p className="text-2xl font-bold text-green-700">{calculateScore()}</p>
-              </div>
-              <div className="bg-red-50 p-4 rounded-2xl text-center border border-red-100">
-                <p className="text-sm text-red-600 mb-1">{t('wrong')}</p>
-                <p className="text-2xl font-bold text-red-700">{Object.keys(selectedAnswers).length - calculateScore()}</p>
-              </div>
-            </div>
-
-            <div className="space-y-8">
-              <h3 className="text-xl font-bold text-slate-800 border-b pb-4">Review Answers</h3>
-              {activeQuiz?.questions.map((q, qIndex) => {
-                const userAnswer = selectedAnswers[qIndex];
-                const isCorrect = userAnswer === q.correctIndex;
-                const isUnanswered = userAnswer === undefined;
-
-                return (
-                  <div key={qIndex} className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
-                    <div className="flex gap-3 mb-4">
-                      <span className="flex-shrink-0 w-8 h-8 bg-white rounded-full flex items-center justify-center font-bold text-slate-500 shadow-sm">
-                        {qIndex + 1}
-                      </span>
-                      <p className="font-medium text-slate-800 pt-1">{q.question}</p>
-                    </div>
-                    <div className="space-y-3 pl-11">
-                      {q.options.map((opt, oIndex) => {
-                        let optionClass = "bg-white border-slate-200 text-slate-600";
-                        let icon = null;
-
-                        if (oIndex === q.correctIndex) {
-                          optionClass = "bg-purple-50 border-purple-200 text-purple-700 font-medium";
-                          icon = <CheckCircle2 size={18} className="text-purple-600" />;
-                        } else if (oIndex === userAnswer && !isCorrect) {
-                          optionClass = "bg-red-50 border-red-200 text-red-700";
-                          icon = <XCircle size={18} className="text-red-500" />;
-                        }
-
-                        return (
-                          <div key={oIndex} className={`p-4 rounded-xl border flex items-center justify-between ${optionClass}`}>
-                            <span>{opt}</span>
-                            {icon}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    {isUnanswered && (
-                      <p className="text-sm text-amber-600 mt-4 pl-11 flex items-center gap-2">
-                        <AlertTriangle size={16} />
-                        {t('unanswered')}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-12 p-6 bg-blue-50 rounded-2xl flex items-start gap-4">
-              <AlertTriangle className="text-blue-500 flex-shrink-0 mt-1" size={24} />
-              <p className="text-sm text-blue-800 leading-relaxed">
-                {t('quizDisclaimer')}
-              </p>
-            </div>
-
-            <div className="mt-8 text-center">
-              <button
-                onClick={() => {
-                  setQuizStarted(false);
-                  setQuizFinished(false);
-                  setSelectedOrg('');
-                  setSelectedYear('');
-                }}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-8 rounded-xl transition-colors"
-              >
-                Take Another Quiz
               </button>
             </div>
           </motion.div>

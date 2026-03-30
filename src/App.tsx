@@ -26,6 +26,8 @@ const PrivacyPage = lazy(() => import('./pages/PrivacyPage').then(module => ({ d
 const DeveloperPage = lazy(() => import('./pages/DeveloperPage').then(module => ({ default: module.DeveloperPage })));
 const Tools = lazy(() => import('./pages/Tools').then(module => ({ default: module.default })));
 const QuizPage = lazy(() => import('./pages/QuizPage').then(module => ({ default: module.QuizPage })));
+const QuizResultPage = lazy(() => import('./pages/QuizResultPage').then(module => ({ default: module.QuizResultPage })));
+const QuizHistoryPage = lazy(() => import('./pages/QuizHistoryPage').then(module => ({ default: module.default })));
 
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -49,6 +51,8 @@ function AnimatedRoutes() {
     { path: "/developer", element: <PageTransition><DeveloperPage /></PageTransition> },
     { path: "/tools", element: <PageTransition><Tools /></PageTransition> },
     { path: "/quiz", element: <PageTransition><QuizPage /></PageTransition> },
+    { path: "/quiz/result", element: <PageTransition><QuizResultPage /></PageTransition> },
+    { path: "/quiz/history", element: <PageTransition><QuizHistoryPage /></PageTransition> },
   ]);
 
   if (!element) return null;

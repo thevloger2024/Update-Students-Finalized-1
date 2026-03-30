@@ -21,6 +21,11 @@ export function DetailPage() {
   const [translatedContent, setTranslatedContent] = useState<{
     title?: string;
     description?: string;
+    syllabus?: string;
+    organization?: string;
+    state?: string;
+    eligibilityNotice?: string;
+    ageLimit?: string;
     steps?: { text: string; image?: string }[];
     requiredDocuments?: string[];
     applicationFees?: ApplicationFee[];
@@ -57,11 +62,18 @@ export function DetailPage() {
   };
 
   const handleTranslate = async () => {
-    if (!update || language === 'en') return;
+    if (!update || language === 'en') {
+      setTranslatedContent(null);
+      return;
+    }
     
     const translatedTitle = await translateContent(update.title, language);
     const translatedDesc = await translateContent(update.description, language);
     const translatedSyllabus = update.syllabus ? await translateContent(update.syllabus, language) : undefined;
+    const translatedOrg = await translateContent(update.organization, language);
+    const translatedState = await translateContent(update.state, language);
+    const translatedEligibility = update.eligibilityNotice ? await translateContent(update.eligibilityNotice, language) : undefined;
+    const translatedAgeLimit = update.ageLimit ? await translateContent(update.ageLimit, language) : undefined;
     
     let translatedDocs = undefined;
     if (update.requiredDocuments) {
@@ -104,6 +116,10 @@ export function DetailPage() {
       title: translatedTitle,
       description: translatedDesc,
       syllabus: translatedSyllabus,
+      organization: translatedOrg,
+      state: translatedState,
+      eligibilityNotice: translatedEligibility,
+      ageLimit: translatedAgeLimit,
       requiredDocuments: translatedDocs,
       applicationFees: translatedFees,
       postVacancies: translatedVacancies,
@@ -248,7 +264,7 @@ export function DetailPage() {
                     to={`/?q=${encodeURIComponent(update.organization)}`}
                     className="font-medium hover:text-academic-blue hover:underline"
                   >
-                    <TranslatedText text={update.organization} />
+                    {translatedContent?.organization || update.organization}
                   </Link>
                 </div>
               </div>
@@ -267,7 +283,7 @@ export function DetailPage() {
                 <MapPin className="text-academic-blue" size={20} />
                 <div>
                   <p className="text-xs text-slate-500 uppercase font-semibold tracking-wider">{t('stateRegion')}</p>
-                  <p className="font-medium"><TranslatedText text={update.state} /></p>
+                  <p className="font-medium">{translatedContent?.state || update.state}</p>
                 </div>
               </div>
 
@@ -290,11 +306,11 @@ export function DetailPage() {
               </div>
             </div>
 
-            {update.eligibilityNotice && (
+            {(translatedContent?.eligibilityNotice || update.eligibilityNotice) && (
               <div className="mb-8">
                 <div className="bg-green-500 text-white px-6 py-4 rounded-2xl shadow-lg flex items-center justify-center text-center border-2 border-green-400/30">
                   <p className="font-bold text-sm md:text-lg whitespace-nowrap overflow-hidden text-ellipsis">
-                    <TranslatedText text={update.eligibilityNotice} />
+                    {translatedContent?.eligibilityNotice || update.eligibilityNotice}
                   </p>
                 </div>
               </div>
@@ -339,7 +355,7 @@ export function DetailPage() {
                     </h3>
                     <div className="bg-white p-4 rounded-xl border border-blue-100 mb-4">
                       <p className="text-slate-700 font-bold text-lg">
-                        <TranslatedText text={update.ageLimit} />
+                        {translatedContent?.ageLimit || update.ageLimit}
                       </p>
                     </div>
                     {update.ageLimitNotice && (
@@ -360,8 +376,8 @@ export function DetailPage() {
             )}
 
             {(() => {
-              const docs = translatedContent?.requiredDocuments || update.requiredDocuments;
-              if (!docs || docs.length === 0) return null;
+              const docs = (translatedContent?.requiredDocuments || update.requiredDocuments || []).filter(d => d.trim() !== '');
+              if (docs.length === 0) return null;
               return (
                 <div className="mb-12 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                   <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
@@ -382,8 +398,8 @@ export function DetailPage() {
             })()}
 
             {(() => {
-              const fees = translatedContent?.applicationFees || update.applicationFees;
-              if (!fees || fees.length === 0) return null;
+              const fees = (translatedContent?.applicationFees || update.applicationFees || []).filter(f => f.category.trim() !== '' || f.fee.trim() !== '');
+              if (fees.length === 0) return null;
               return (
                 <div className="mb-12 bg-blue-50/50 border border-blue-100 rounded-2xl p-6 shadow-sm">
                   <h2 className="text-2xl font-bold text-academic-blue mb-6 flex items-center gap-2">
@@ -405,8 +421,8 @@ export function DetailPage() {
             })()}
 
             {(() => {
-              const vacancies = translatedContent?.postVacancies || update.postVacancies;
-              if (!vacancies || vacancies.length === 0) return null;
+              const vacancies = (translatedContent?.postVacancies || update.postVacancies || []).filter(v => v.postName.trim() !== '' || v.count.trim() !== '');
+              if (vacancies.length === 0) return null;
               return (
                 <div className="mb-12 bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                   <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">

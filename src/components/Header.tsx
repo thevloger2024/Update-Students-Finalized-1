@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GraduationCap, LogIn, LogOut, User, Search, X, Bookmark, MessageSquarePlus, Bell, Shield, Settings, Languages, ChevronDown, Wrench } from 'lucide-react';
+import { GraduationCap, LogIn, LogOut, User, Search, X, Bookmark, MessageSquarePlus, Bell, Shield, Settings, Languages, ChevronDown, Wrench, History } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth, signInWithGoogle, logOut } from '../firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -299,6 +299,15 @@ export function Header() {
                         >
                           <Bookmark size={16} />
                           <span className="font-medium">{t('saved')}</span>
+                        </Link>
+                        
+                        <Link 
+                          to="/quiz/history" 
+                          onClick={() => setIsProfileMenuOpen(false)}
+                          className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 text-slate-600 hover:bg-slate-50 hover:text-academic-blue transition-colors"
+                        >
+                          <History size={16} />
+                          <span className="font-medium">{t('quizHistory')}</span>
                         </Link>
                         
                         <div className="h-px bg-slate-100 my-1"></div>

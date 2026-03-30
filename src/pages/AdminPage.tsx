@@ -313,6 +313,10 @@ export function AdminPage() {
         state: form.state.trim().toLowerCase(),
         organization: form.organization.trim(),
         posts: form.posts ? Number(form.posts) : null,
+        requiredDocuments: (form.requiredDocuments || []).filter(doc => doc.trim() !== ''),
+        applicationFees: (form.applicationFees || []).filter(fee => fee.category.trim() !== '' || fee.fee.trim() !== ''),
+        postVacancies: (form.postVacancies || []).filter(v => v.postName.trim() !== '' || v.count.trim() !== ''),
+        steps: (form.steps || []).filter(step => step.text.trim() !== ''),
         updatedAt: Date.now(),
         // Ensure type is explicitly set from form
         type: form.type || 'job',

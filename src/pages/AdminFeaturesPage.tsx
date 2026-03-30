@@ -3,7 +3,7 @@ import { Header } from '../components/Header';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, onSnapshot, limit, updateDoc, getDocs, deleteDoc, orderBy } from 'firebase/firestore';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, Type } from '@google/genai';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle, Linkedin, Mail, CheckCircle2, Clock, ExternalLink, UserCheck, UserMinus, ShieldAlert, Send, MessageSquare, User as UserIcon } from 'lucide-react';
@@ -738,46 +738,78 @@ function AdminQuizManager({ onDelete }: { onDelete: (id: string, type: 'message'
 
     setLoading(true);
     try {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const base64Data = (reader.result as string).split(',')[1];
-        const mimeType = file.type;
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
 
-        const ai = new GoogleGenAI({ apiKey: (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY || '' });
-        
-        const prompt = `Extract up to 90 multiple-choice questions (or all available if less) from this document for the ${orgName} from year ${year}. Return a JSON array of objects. Each object must have: 'question' (string), 'options' (array of exactly 4 strings), and 'correctIndex' (number from 0 to 3 indicating the correct option). Ensure the output is valid JSON.`;
+      const mimeType = file.type;
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+      
+      const prompt = `Extract up to 90 multiple-choice questions (or all available if less) from this document for the ${orgName} from year ${year}. 
+                     Return a JSON array of objects. Each object must have: 
+                     'question' (string), 
+                     'options' (array of exactly 4 strings), 
+                     'correctIndex' (number from 0 to 3 indicating the correct option),
+                     'explanation' (optional string explaining the answer).
+                     Ensure the output is valid JSON and strictly follows the schema.`;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3-flash-preview',
-          contents: [
+      const response = await ai.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [{
+          parts: [
             { inlineData: { data: base64Data, mimeType } },
-            prompt
-          ],
-          config: { responseMimeType: "application/json" }
-        });
-
-        const questions = JSON.parse(response.text);
-        
-        if (!Array.isArray(questions) || questions.length === 0) {
-          throw new Error("Invalid questions format returned from AI.");
+            { text: prompt }
+          ]
+        }],
+        config: { 
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                question: { type: Type.STRING },
+                options: { 
+                  type: Type.ARRAY,
+                  items: { type: Type.STRING },
+                  minItems: 4,
+                  maxItems: 4
+                },
+                correctIndex: { type: Type.INTEGER },
+                explanation: { type: Type.STRING }
+              },
+              required: ['question', 'options', 'correctIndex']
+            }
+          }
         }
+      });
 
-        const quizId = `${orgName.replace(/[^a-zA-Z0-9]/g, '_')}_${year}_${Date.now()}`;
-        await setDoc(doc(db, 'quizzes', quizId), {
-          type: quizType,
-          organization: orgName,
-          year,
-          questions,
-          createdAt: Date.now()
-        });
+      const questions = JSON.parse(response.text || "[]");
+      
+      if (!Array.isArray(questions) || questions.length === 0) {
+        throw new Error("Invalid questions format returned from AI.");
+      }
 
-        toast.success(t('quizGeneratedSuccess'));
-        setFile(null);
-        setYear('');
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        fetchExistingQuizzes();
-      };
-      reader.readAsDataURL(file);
+      const quizId = `${orgName.replace(/[^a-zA-Z0-9]/g, '_')}_${year}_${Date.now()}`;
+      await setDoc(doc(db, 'quizzes', quizId), {
+        type: quizType,
+        organization: orgName,
+        year,
+        questions,
+        createdAt: Date.now()
+      });
+
+      toast.success(t('quizGeneratedSuccess'));
+      setFile(null);
+      setYear('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      fetchExistingQuizzes();
     } catch (error) {
       console.error("Error generating quiz:", error);
       toast.error(t('quizGenerationFailed'));

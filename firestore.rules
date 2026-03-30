@@ -142,6 +142,19 @@ service cloud.firestore {
              validStringLength('url', 1, 500);
     }
 
+    function isValidQuizResult() {
+      return hasRequiredFields(['quizId', 'quizTitle', 'score', 'totalQuestions', 'timeTaken', 'answers', 'createdAt']) &&
+             validStringLength('quizId', 1, 100) &&
+             validStringLength('quizTitle', 1, 500) &&
+             request.resource.data.score is number &&
+             request.resource.data.totalQuestions is number &&
+             request.resource.data.timeTaken is number &&
+             request.resource.data.answers is map &&
+             request.resource.data.createdAt is number &&
+             isValidOptionalString('organization', 1, 200) &&
+             isValidOptionalString('year', 1, 20);
+    }
+
     function isValidUser() {
       return hasRequiredFields(['email', 'role']) &&
              isValidEmail(request.resource.data.email) &&
@@ -206,8 +219,8 @@ service cloud.firestore {
     }
 
     match /users/{userId}/quiz_history/{historyId} {
-      allow read: if isAuthenticated() && request.auth.uid == userId;
-      allow create, update: if isAuthenticated() && request.auth.uid == userId;
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == userId && isValidQuizResult();
       allow delete: if isAuthenticated() && request.auth.uid == userId;
     }
 

@@ -279,6 +279,49 @@
         }
       },
       "required": ["email", "role"]
+    },
+    "Quiz": {
+      "title": "Quiz",
+      "description": "A generated quiz based on uploaded materials.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "questions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "question": { "type": "string" },
+              "options": { "type": "array", "items": { "type": "string" } },
+              "correctAnswer": { "type": "string" },
+              "explanation": { "type": "string" }
+            },
+            "required": ["question", "options", "correctAnswer"]
+          }
+        },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["title", "questions", "createdAt"]
+    },
+    "QuizResult": {
+      "title": "QuizResult",
+      "description": "A user's completed quiz result.",
+      "type": "object",
+      "properties": {
+        "quizId": { "type": "string" },
+        "quizTitle": { "type": "string" },
+        "organization": { "type": "string" },
+        "year": { "type": "string" },
+        "score": { "type": "number" },
+        "totalQuestions": { "type": "number" },
+        "timeTaken": { "type": "number" },
+        "answers": { "type": "object", "description": "Map of question index to selected option index." },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["quizId", "quizTitle", "score", "totalQuestions", "timeTaken", "answers", "createdAt"]
     }
   },
   "firestore": {
@@ -287,6 +330,12 @@
         "$ref": "#/entities/Update"
       },
       "description": "Collection of all educational and job updates."
+    },
+    "quizzes": {
+      "schema": {
+        "$ref": "#/entities/Quiz"
+      },
+      "description": "Collection of generated quizzes."
     },
     "feedback": {
       "schema": {
@@ -334,7 +383,14 @@
       "schema": {
         "$ref": "#/entities/ContactMessage"
       },
-      "description": "Messages sent to the developer."
+      "description": "Messages sent to the developer.",
+      "required": ["name", "email", "message", "createdAt"]
+    },
+    "users/{userId}/quiz_history": {
+      "schema": {
+        "$ref": "#/entities/QuizResult"
+      },
+      "description": "User's quiz performance history."
     }
   }
 }
