@@ -467,7 +467,7 @@ export function AdminPage() {
 
       const results = await Promise.all(prompts.map(prompt => 
         ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: 'gemini-3.1-flash-image-preview',
           contents: {
             parts: [
               {
@@ -481,6 +481,12 @@ export function AdminPage() {
               },
             ],
           },
+          config: {
+            imageConfig: {
+              aspectRatio: "16:9",
+              imageSize: "1K"
+            }
+          }
         })
       ));
 
@@ -534,13 +540,14 @@ export function AdminPage() {
 
       const results = await Promise.all(prompts.map(prompt => 
         ai.models.generateContent({
-          model: 'gemini-2.5-flash-image',
+          model: 'gemini-3.1-flash-image-preview',
           contents: {
             parts: [{ text: prompt }],
           },
           config: {
             imageConfig: {
               aspectRatio: "16:9",
+              imageSize: "1K"
             }
           }
         })
