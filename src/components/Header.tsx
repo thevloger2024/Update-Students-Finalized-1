@@ -14,7 +14,7 @@ const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
 const TYPING_WORDS = [
   "RRB", "SSC", "UPSC", "BPSC", "QUIZ", "LATEST JOBS", 
-  "LATEST NEWS", "SCHOLARSHIPS", "ADMIT CARD", "RESULT NEET", "JEE", "UPDATES"
+  "LATEST NEWS", "SCHOLARSHIPS", "ADMIT CARD", "RESULT NEET", "JEE"
 ];
 
 export function Header() {
@@ -76,7 +76,23 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    const currentWord = TYPING_WORDS[currentWordIndex];
+    setDisplayText('');
+    setIsDeleting(false);
+  }, [language]);
+
+  useEffect(() => {
+    const getTranslatedWord = (word: string) => {
+      switch (word) {
+        case "LATEST JOBS": return t('latestJobs').toUpperCase();
+        case "SCHOLARSHIPS": return t('scholarships').toUpperCase();
+        case "ADMIT CARD": return t('admitCard').toUpperCase();
+        case "QUIZ": return (t('quiz') || "QUIZ").toUpperCase();
+        case "LATEST NEWS": return (t('latestNews') || "LATEST NEWS").toUpperCase();
+        default: return word;
+      }
+    };
+
+    const currentWord = getTranslatedWord(TYPING_WORDS[currentWordIndex]);
     
     const timeout = setTimeout(() => {
       if (!isDeleting) {
@@ -96,7 +112,7 @@ export function Header() {
     }, isDeleting ? 50 : 100); // Typing speed vs deleting speed
 
     return () => clearTimeout(timeout);
-  }, [displayText, isDeleting, currentWordIndex]);
+  }, [displayText, isDeleting, currentWordIndex, language, t]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -372,14 +388,18 @@ export function Header() {
         <hr className="border-t-2 border-academic-blue/20 w-full" />
         
         <div className="h-6 mt-2 flex items-center justify-center">
-          <span className="text-sm md:text-base font-medium text-slate-400 tracking-wider uppercase">
-            <TranslatedText text={displayText} />
+          <motion.span 
+            className="text-sm md:text-base font-medium text-slate-400 tracking-wider uppercase"
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            {displayText}
             <motion.span
               animate={{ opacity: [0, 1, 0] }}
               transition={{ repeat: Infinity, duration: 0.8 }}
               className="inline-block w-[2px] h-4 bg-slate-400 ml-1 align-middle"
             />
-          </span>
+          </motion.span>
         </div>
         
         <hr className="border-t-2 border-academic-blue/20 w-full mt-2" />
