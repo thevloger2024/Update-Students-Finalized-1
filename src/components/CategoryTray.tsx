@@ -38,6 +38,7 @@ export function CategoryTray({ selectedCategory, onSelectCategory }: CategoryTra
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            animate={{ scale: selectedCategory === null ? 1.05 : 1 }}
             onClick={() => onSelectCategory(null)}
             className={cn(
               "relative whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-300",
@@ -49,8 +50,14 @@ export function CategoryTray({ selectedCategory, onSelectCategory }: CategoryTra
             {selectedCategory === null && (
               <motion.div
                 layoutId="category-background"
-                className="absolute inset-0 bg-academic-blue rounded-full shadow-md shadow-blue-200"
-                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                className="absolute inset-0 bg-academic-blue rounded-full"
+                animate={{ 
+                  boxShadow: ["0px 4px 10px rgba(30, 58, 138, 0.3)", "0px 4px 20px rgba(30, 58, 138, 0.6)", "0px 4px 10px rgba(30, 58, 138, 0.3)"]
+                }}
+                transition={{ 
+                  layout: { type: "spring", bounce: 0.2, duration: 0.6 },
+                  boxShadow: { repeat: Infinity, duration: 2, ease: "easeInOut" }
+                }}
               />
             )}
             <span className="relative z-10">{t('allUpdates')}</span>
@@ -61,6 +68,7 @@ export function CategoryTray({ selectedCategory, onSelectCategory }: CategoryTra
               key={cat}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              animate={{ scale: selectedCategory === cat ? 1.05 : 1 }}
               onClick={() => onSelectCategory(cat)}
               className={cn(
                 "relative whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-semibold transition-all duration-300",
@@ -72,8 +80,14 @@ export function CategoryTray({ selectedCategory, onSelectCategory }: CategoryTra
               {selectedCategory === cat && (
                 <motion.div
                   layoutId="category-background"
-                  className="absolute inset-0 bg-academic-blue rounded-full shadow-md shadow-blue-200"
-                  transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                  className="absolute inset-0 bg-academic-blue rounded-full"
+                  animate={{ 
+                    boxShadow: ["0px 4px 10px rgba(30, 58, 138, 0.3)", "0px 4px 20px rgba(30, 58, 138, 0.6)", "0px 4px 10px rgba(30, 58, 138, 0.3)"]
+                  }}
+                  transition={{ 
+                    layout: { type: "spring", bounce: 0.2, duration: 0.6 },
+                    boxShadow: { repeat: Infinity, duration: 2, ease: "easeInOut" }
+                  }}
                 />
               )}
               <span className="relative z-10"><TranslatedText text={cat} /></span>
