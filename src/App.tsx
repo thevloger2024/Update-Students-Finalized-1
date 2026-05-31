@@ -4,11 +4,15 @@
  */
 
 import React, { lazy, Suspense } from 'react';
+import { HelmetProvider } from 'react-helmet-async';
 import { BrowserRouter as Router, useLocation, useRoutes } from 'react-router-dom';
 import { BookmarkProvider } from './contexts/BookmarkContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { Toaster } from 'sonner';
 import { ScrollToTop } from './components/ScrollToTop';
+import { MobileBottomNav } from './components/MobileBottomNav';
+import { TelegramBanner } from './components/TelegramBanner';
 import { PageTransition } from './components/PageTransition';
 import { AnimatePresence } from 'framer-motion';
 import { Footer } from './components/Footer';
@@ -28,6 +32,8 @@ const Tools = lazy(() => import('./pages/Tools').then(module => ({ default: modu
 const QuizPage = lazy(() => import('./pages/QuizPage').then(module => ({ default: module.QuizPage })));
 const QuizResultPage = lazy(() => import('./pages/QuizResultPage').then(module => ({ default: module.QuizResultPage })));
 const QuizHistoryPage = lazy(() => import('./pages/QuizHistoryPage').then(module => ({ default: module.default })));
+const ExamCalendar = lazy(() => import('./pages/ExamCalendar').then(module => ({ default: module.ExamCalendar })));
+const TipsPage = lazy(() => import('./pages/TipsPage').then(module => ({ default: module.TipsPage })));
 
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -41,6 +47,9 @@ function AnimatedRoutes() {
     { path: "/", element: <PageTransition><Home /></PageTransition> },
     { path: "/category/:type", element: <PageTransition><CategoryPage /></PageTransition> },
     { path: "/update/:id", element: <PageTransition><DetailPage /></PageTransition> },
+    { path: "/exam-calendar", element: <PageTransition><ExamCalendar /></PageTransition> },
+    { path: "/tips", element: <PageTransition><TipsPage /></PageTransition> },
+    { path: "/tips/:id", element: <PageTransition><TipsPage /></PageTransition> }, // Re-route to list for now
     { path: "/saved", element: <PageTransition><SavedPage /></PageTransition> },
     { path: "/notifications", element: <PageTransition><NotificationSettingsPage /></PageTransition> },
     { path: "/admin", element: <PageTransition><AdminPage /></PageTransition> },
@@ -68,20 +77,26 @@ import { MaintenanceGuard } from './components/MaintenanceGuard';
 
 export default function App() {
   return (
-    <LanguageProvider>
-      <BookmarkProvider>
-        <Toaster position="top-center" richColors />
-        <Router>
-          <Suspense fallback={<LoadingFallback />}>
-            <MaintenanceGuard>
-              <AnimatedRoutes />
-              <Footer />
-              <ScrollToTop />
-            </MaintenanceGuard>
-          </Suspense>
-        </Router>
-      </BookmarkProvider>
-    </LanguageProvider>
+    <HelmetProvider>
+      <ThemeProvider>
+        <LanguageProvider>
+          <BookmarkProvider>
+            <Toaster position="top-center" richColors />
+            <Router>
+              <Suspense fallback={<LoadingFallback />}>
+                <MaintenanceGuard>
+                  <AnimatedRoutes />
+                  <Footer />
+                  <TelegramBanner />
+                  <MobileBottomNav />
+                  <ScrollToTop />
+                </MaintenanceGuard>
+              </Suspense>
+            </Router>
+          </BookmarkProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </HelmetProvider>
   );
 }
 

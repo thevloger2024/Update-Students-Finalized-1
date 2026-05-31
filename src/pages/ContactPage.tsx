@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { collection, onSnapshot, query, orderBy, addDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { toast } from 'sonner';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 
 interface SocialLink {
   id: string;
@@ -25,6 +26,7 @@ export function ContactPage() {
     subject: '',
     message: ''
   });
+  const { settings } = useSiteSettings();
 
   useEffect(() => {
     const q = query(collection(db, 'social_links'), orderBy('platform', 'asc'));
@@ -109,7 +111,9 @@ export function ContactPage() {
                     </div>
                     <div>
                       <p className="text-blue-200 text-sm">Email Us</p>
-                      <p className="font-bold">support@updatestudents.com</p>
+                      <a href={`mailto:${settings.contactEmail}`} className="font-bold hover:underline transition-all">
+                        {settings.contactEmail}
+                      </a>
                     </div>
                   </div>
                   <div className="flex items-center gap-4">

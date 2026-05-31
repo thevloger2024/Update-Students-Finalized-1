@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GraduationCap, Facebook, Twitter, Instagram, Youtube, Github, MessageCircle, Mail, User, Shield, Share2 } from 'lucide-react';
+import { GraduationCap, Facebook, Twitter, Instagram, Youtube, Github, MessageCircle, Mail, User, Shield, Share2, Send } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 
 interface SocialLink {
   id: string;
@@ -16,6 +17,7 @@ export const Footer: React.FC = () => {
   const { t } = useLanguage();
   const currentYear = new Date().getFullYear();
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
+  const { settings } = useSiteSettings();
 
   useEffect(() => {
     const q = query(collection(db, 'social_links'), orderBy('platform', 'asc'));
@@ -49,11 +51,11 @@ export const Footer: React.FC = () => {
             <Link to="/" className="flex items-center gap-2 text-academic-blue">
               <GraduationCap size={32} strokeWidth={1.5} />
               <span className="font-serif text-2xl font-bold tracking-tight">
-                Update Students
+                {settings.siteName}
               </span>
             </Link>
             <p className="text-slate-500 text-sm leading-relaxed">
-              {t('aboutDesc')}
+              {t('aboutDesc').replace(/Update Students/g, settings.siteName)}
             </p>
           </div>
 
@@ -117,7 +119,9 @@ export const Footer: React.FC = () => {
             <ul className="space-y-3">
               <li className="flex items-center gap-3 text-slate-500 text-sm">
                 <Mail size={18} className="text-academic-blue" />
-                <span>support@updatestudents.com</span>
+                <a href={`mailto:${settings.contactEmail}`} className="hover:text-academic-blue transition-colors">
+                  {settings.contactEmail}
+                </a>
               </li>
               <li className="flex items-center gap-3 text-slate-500 text-sm">
                 <MessageCircle size={18} className="text-academic-blue" />
@@ -129,10 +133,24 @@ export const Footer: React.FC = () => {
 
         <div className="pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-slate-400 text-sm">
-            {t('copyright').replace('{year}', currentYear.toString())} {t('allRightsReserved')}
+            {t('copyright').replace('{year}', currentYear.toString()).replace(/Update Students/g, settings.siteName)} {t('allRightsReserved')}
           </p>
           
           <div className="flex flex-wrap items-center gap-4">
+            {settings.telegramLink && (
+              <a 
+                href={settings.telegramLink} 
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 p-2 px-3 bg-slate-50 text-slate-500 hover:text-blue-500 hover:bg-blue-50 rounded-full transition-all group"
+                title="Telegram Channel"
+              >
+                <Send size={20} />
+                <span className="text-xs font-bold hidden group-hover:block transition-all">
+                  Telegram
+                </span>
+              </a>
+            )}
             {socialLinks.map((link) => (
               <a 
                 key={link.id}

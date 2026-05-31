@@ -78,19 +78,6 @@ export function SavedPage() {
       return 0;
     });
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-slate-50 font-sans">
-        <Header />
-        <div className="max-w-4xl mx-auto px-4 py-16 text-center">
-          <Bookmark size={48} className="mx-auto text-slate-300 mb-4" />
-          <h2 className="text-2xl font-bold text-slate-700 mb-4">{t('loginToViewSaved')}</h2>
-          <Link to="/" className="text-academic-blue hover:underline">{t('backToHome')}</Link>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
       <Header />

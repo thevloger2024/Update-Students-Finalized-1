@@ -13,6 +13,8 @@ import { formatDate } from '../contexts/utils';
 import { GoogleGenAI } from "@google/genai";
 import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from '../components/TranslatedText';
+import { AdSenseAnalytics } from '../components/AdSenseAnalytics';
+import { useAdminNotifications } from '../hooks/useAdminNotifications';
 
 const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
@@ -96,7 +98,7 @@ export function AdminPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [activeTab, setActiveTab] = useState<'updates' | 'social'>('updates');
+  const [activeTab, setActiveTab] = useState<'updates' | 'social' | 'adsense'>('updates');
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [socialForm, setSocialForm] = useState<Omit<SocialLink, 'id'>>({
     platform: 'WhatsApp',
@@ -105,6 +107,15 @@ export function AdminPage() {
   });
   const [editingSocialId, setEditingSocialId] = useState<string | null>(null);
   
+  // AI Auto-Fill States
+  const [showAiFill, setShowAiFill] = useState(false);
+  const [aiUrl, setAiUrl] = useState('');
+  const [aiTitle, setAiTitle] = useState('');
+  const [aiStatus, setAiStatus] = useState<'idle' | 'fetching' | 'analyzing'>('idle');
+  
+  const isAdmin = user?.email === ADMIN_EMAIL;
+  const { unreadCount } = useAdminNotifications(isAdmin);
+
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -429,6 +440,119 @@ export function AdminPage() {
     });
   };
 
+  const handleAiAutoFill = async () => {
+    if (!aiUrl.trim() || !aiTitle.trim()) {
+      toast.error("Please provide both URL and Title.");
+      return;
+    }
+
+    setAiStatus('fetching');
+    const toastId = toast.loading(t('fetchingUrl') || "Fetching website data...");
+
+    try {
+      // 1. Attempt to fetch URL content via CORS proxy
+      let cleanText = "";
+      try {
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(aiUrl)}`);
+        if (response.ok) {
+          const data = await response.json();
+          const htmlContent = data.contents;
+          if (htmlContent) {
+            const doc = new DOMParser().parseFromString(htmlContent, 'text/html');
+            const textContent = doc.body.textContent || '';
+            cleanText = textContent.replace(/\s+/g, ' ').substring(0, 30000); // Limit to 30k chars
+          }
+        }
+      } catch (fetchError) {
+        console.warn("Failed to fetch URL directly, falling back to Gemini Search:", fetchError);
+        // We don't throw here, we let Gemini use Google Search to find the info
+      }
+
+      setAiStatus('analyzing');
+      toast.loading(t('analyzingData') || "AI is analyzing and writing content...", { id: toastId });
+
+      // 2. Call Gemini
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) throw new Error(t('geminiKeyMissing'));
+
+      const ai = new GoogleGenAI({ apiKey });
+      
+      const prompt = `You are an expert content writer and data extractor for an educational updates portal.
+      I need you to gather information about the following update:
+      Title/Topic: "${aiTitle}"
+      Official URL: "${aiUrl}"
+      
+      ${cleanText ? `Here is some text extracted from the website:\n${cleanText}\n\n` : `Please use your Google Search capabilities to find the latest, most accurate information about this specific update from the official website or reliable news sources.\n\n`}
+      
+      Extract the details and return ONLY a raw JSON object (no markdown formatting, no \`\`\`json) matching this exact structure. Do not include any other text.
+      {
+        "type": "job" or "admit_card" or "result" or "scholarship",
+        "category": "Short category name like SSC, RRB, UPSC, Police, etc.",
+        "state": "State name or 'All India'",
+        "organization": "Name of the hiring organization",
+        "description": "Write a highly detailed, SEO-friendly article (2-3 paragraphs) explaining this update, eligibility, and important points.",
+        "startDate": "YYYY-MM-DD or empty",
+        "endDate": "YYYY-MM-DD or empty",
+        "posts": numeric total vacancies or null,
+        "ageLimit": "Age limit details or empty",
+        "applicationFees": [{"category": "General/OBC", "fee": "100"}],
+        "postVacancies": [{"postName": "Clerk", "count": "50"}],
+        "steps": [{"text": "Step 1..."}, {"text": "Step 2..."}]
+      }
+      
+      If any specific data is not found, leave it empty or null.`;
+
+      const aiResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          tools: [{ googleSearch: {} }]
+        }
+      } as any);
+
+      let jsonText = aiResponse.text || "{}";
+      // Clean up markdown if Gemini accidentally included it
+      jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '').trim();
+      
+      // Sometimes Gemini might include search grounding metadata at the end, let's try to extract just the JSON block
+      const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        jsonText = jsonMatch[0];
+      }
+      
+      const extractedData = JSON.parse(jsonText);
+
+      // 3. Update Form
+      setForm(prev => ({
+        ...prev,
+        title: aiTitle,
+        officialUrl: aiUrl,
+        type: extractedData.type || 'job',
+        category: extractedData.category || '',
+        state: extractedData.state || '',
+        organization: extractedData.organization || '',
+        description: extractedData.description || '',
+        startDate: extractedData.startDate || '',
+        endDate: extractedData.endDate || '',
+        posts: extractedData.posts || undefined,
+        ageLimit: extractedData.ageLimit || '',
+        applicationFees: Array.isArray(extractedData.applicationFees) ? extractedData.applicationFees : [],
+        postVacancies: Array.isArray(extractedData.postVacancies) ? extractedData.postVacancies : [],
+        steps: Array.isArray(extractedData.steps) ? extractedData.steps : [],
+      }));
+
+      toast.success(t('aiSuccess') || "Form auto-filled successfully!", { id: toastId });
+      setShowAiFill(false);
+      setAiUrl('');
+      setAiTitle('');
+    } catch (error) {
+      console.error("AI Auto-Fill Error:", error);
+      toast.error(t('aiError') || "Failed to extract data. The website might be blocking access or the URL is invalid.", { id: toastId });
+    } finally {
+      setAiStatus('idle');
+    }
+  };
+
   const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -706,30 +830,41 @@ export function AdminPage() {
           </div>
           <button 
             onClick={() => navigate('/admin/features')}
-            className="ml-auto flex items-center gap-2 bg-white border-2 border-academic-blue/10 text-academic-blue px-6 py-3 rounded-2xl font-bold hover:bg-academic-blue hover:text-white transition-all shadow-sm active:scale-95"
+            className="ml-auto relative flex items-center gap-2 bg-white border-2 border-academic-blue/10 text-academic-blue px-6 py-3 rounded-2xl font-bold hover:bg-academic-blue hover:text-white transition-all shadow-sm active:scale-95"
           >
             <Settings size={20} />
             <span>{t('adminFeatures')}</span>
+            {unreadCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm animate-pulse">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex items-center gap-2 mb-8 bg-white p-1.5 rounded-2xl border border-slate-200 w-fit">
+        <div className="flex flex-wrap items-center gap-2 mb-8 bg-white p-1.5 rounded-2xl border border-slate-200 w-fit">
           <button
             onClick={() => setActiveTab('updates')}
-            className={`px-6 py-2.5 rounded-xl font-bold transition-all ${activeTab === 'updates' ? 'bg-academic-blue text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+            className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'updates' ? 'bg-academic-blue text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
           >
             {t('manageUpdates')}
           </button>
           <button
             onClick={() => setActiveTab('social')}
-            className={`px-6 py-2.5 rounded-xl font-bold transition-all ${activeTab === 'social' ? 'bg-academic-blue text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+            className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'social' ? 'bg-academic-blue text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
           >
             {t('manageSocialLinks')}
           </button>
+          <button
+            onClick={() => setActiveTab('adsense')}
+            className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'adsense' ? 'bg-academic-blue text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            {t('adsenseAnalytics') || 'AdSense Analytics'}
+          </button>
         </div>
 
-        {activeTab === 'updates' ? (
+        {activeTab === 'updates' && (
           <>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
           {/* Form Section */}
@@ -740,16 +875,91 @@ export function AdminPage() {
                   {editingId ? <Edit size={20} className="text-academic-blue" /> : <Plus size={20} className="text-academic-blue" />}
                   {editingId ? t('editUpdate') : t('addNewUpdate')}
                 </h2>
-                {editingId && (
-                  <button 
-                    onClick={resetForm}
-                    className="text-sm font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors"
-                  >
-                    <X size={16} />
-                    {t('cancelEdit')}
-                  </button>
-                )}
+                <div className="flex items-center gap-4">
+                  {!editingId && (
+                    <button
+                      onClick={() => setShowAiFill(!showAiFill)}
+                      className="text-sm font-bold bg-purple-100 text-purple-700 hover:bg-purple-200 px-4 py-2 rounded-xl flex items-center gap-2 transition-colors"
+                    >
+                      <Sparkles size={16} />
+                      {t('aiAutoFill') || "AI Auto-Fill"}
+                    </button>
+                  )}
+                  {editingId && (
+                    <button 
+                      onClick={resetForm}
+                      className="text-sm font-bold text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors"
+                    >
+                      <X size={16} />
+                      {t('cancelEdit')}
+                    </button>
+                  )}
+                </div>
               </div>
+              
+              <AnimatePresence>
+                {showAiFill && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden mb-6"
+                  >
+                    <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-2xl border border-purple-100">
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="p-2 bg-purple-100 text-purple-600 rounded-lg">
+                          <Sparkles size={20} />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-purple-900">{t('aiAutoFill') || "AI Auto-Fill Form"}</h3>
+                          <p className="text-sm text-purple-700">{t('aiAutoFillDesc') || "Paste an official URL and let AI extract all details and write the article for you."}</p>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-purple-800 uppercase">{t('jobTitle') || "Update Title / Topic"}</label>
+                          <input 
+                            type="text"
+                            placeholder={t('jobTitlePlaceholder') || "e.g. SSC CGL 2024"}
+                            value={aiTitle}
+                            onChange={(e) => setAiTitle(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-purple-200 focus:ring-2 focus:ring-purple-400 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-purple-800 uppercase">{t('targetUrl') || "Official Website URL"}</label>
+                          <input 
+                            type="url"
+                            placeholder={t('targetUrlPlaceholder') || "https://ssc.nic.in/..."}
+                            value={aiUrl}
+                            onChange={(e) => setAiUrl(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-xl border border-purple-200 focus:ring-2 focus:ring-purple-400 outline-none"
+                          />
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={handleAiAutoFill}
+                        disabled={aiStatus !== 'idle' || !aiUrl || !aiTitle}
+                        className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
+                      >
+                        {aiStatus === 'idle' ? (
+                          <>
+                            <Sparkles size={18} />
+                            {t('generateMagic') || "Generate Magic ✨"}
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            {aiStatus === 'fetching' ? (t('fetchingUrl') || "Fetching website data...") : (t('analyzingData') || "AI is analyzing and writing content...")}
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-3">
@@ -1641,7 +1851,9 @@ export function AdminPage() {
           </div>
         </div>
       </>
-    ) : (
+    )}
+
+    {activeTab === 'social' && (
       <div className="space-y-8">
             <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
               <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
@@ -1774,6 +1986,10 @@ export function AdminPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'adsense' && (
+          <AdSenseAnalytics accountId="ca-pub-6710575017251149" />
         )}
       </main>
 

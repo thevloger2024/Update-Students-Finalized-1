@@ -2,9 +2,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Settings, Hammer, Clock, Mail } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 
 export function MaintenancePage() {
   const { t } = useLanguage();
+  const { settings } = useSiteSettings();
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 font-sans">
@@ -46,7 +48,9 @@ export function MaintenancePage() {
               </div>
               <div className="text-left">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Support</p>
-                <p className="text-slate-700 font-semibold">support@updatestudents.com</p>
+                <a href={`mailto:${settings.contactEmail}`} className="text-slate-700 font-semibold hover:text-academic-blue transition-colors">
+                  {settings.contactEmail}
+                </a>
               </div>
             </div>
           </div>

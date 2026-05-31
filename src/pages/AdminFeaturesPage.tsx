@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from '../components/TranslatedText';
 import { signInWithGoogle, logOut } from '../firebase';
+import { useAdminNotifications } from '../hooks/useAdminNotifications';
 
 const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
@@ -20,6 +21,9 @@ export function AdminFeaturesPage() {
   const [loading, setLoading] = useState(true);
   const [activeFeature, setActiveFeature] = useState<string | null>(null);
   const navigate = useNavigate();
+  
+  const isAdmin = user?.email === ADMIN_EMAIL;
+  const { unreadMessages, unreadFeedback } = useAdminNotifications(isAdmin);
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -151,7 +155,8 @@ export function AdminFeaturesPage() {
       description: t('userFeedbackDesc') || 'Manage and respond to user feedback and issues.',
       icon: MessageCircle,
       color: "bg-amber-50 text-amber-600",
-      status: "Active"
+      status: "Active",
+      badgeCount: unreadFeedback
     },
     {
       id: 'content',
@@ -159,7 +164,8 @@ export function AdminFeaturesPage() {
       description: t('contentModerationDesc'),
       icon: Database,
       color: "bg-blue-50 text-blue-600",
-      status: "Active"
+      status: "Active",
+      badgeCount: 0
     },
     {
       id: 'system',
@@ -167,7 +173,8 @@ export function AdminFeaturesPage() {
       description: t('systemSettingsDesc'),
       icon: Settings,
       color: "bg-orange-50 text-orange-600",
-      status: "Active"
+      status: "Active",
+      badgeCount: 0
     },
     {
       id: 'quiz',
@@ -175,7 +182,8 @@ export function AdminFeaturesPage() {
       description: t('quizManagementDesc'),
       icon: BrainCircuit,
       color: "bg-purple-50 text-purple-600",
-      status: "Active"
+      status: "Active",
+      badgeCount: 0
     },
     {
       id: 'developer',
@@ -183,7 +191,8 @@ export function AdminFeaturesPage() {
       description: "Manage the developer profile page content and image.",
       icon: UserCircle,
       color: "bg-green-50 text-green-600",
-      status: "Active"
+      status: "Active",
+      badgeCount: 0
     },
     {
       id: 'messages',
@@ -191,7 +200,8 @@ export function AdminFeaturesPage() {
       description: "Read and manage messages sent from the Meet the Developer page.",
       icon: Mail,
       color: "bg-red-50 text-red-600",
-      status: "Active"
+      status: "Active",
+      badgeCount: unreadMessages
     }
   ];
 
@@ -246,8 +256,13 @@ export function AdminFeaturesPage() {
                   onClick={() => feature.status === 'Active' && setActiveFeature(feature.id)}
                   className={`bg-white p-8 rounded-3xl shadow-sm border border-slate-200 transition-shadow relative overflow-hidden group ${feature.status === 'Active' ? 'cursor-pointer hover:shadow-md' : 'opacity-75'}`}
                 >
-                  <div className={`w-14 h-14 ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                  <div className={`w-14 h-14 ${feature.color} rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform relative`}>
                     <Icon size={28} />
+                    {feature.badgeCount && feature.badgeCount > 0 ? (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm">
+                        {feature.badgeCount > 9 ? '9+' : feature.badgeCount}
+                      </span>
+                    ) : null}
                   </div>
                   <h3 className="text-xl font-bold text-slate-800 mb-3">{feature.title}</h3>
                   <p className="text-slate-500 text-sm leading-relaxed mb-6">
@@ -614,7 +629,7 @@ function DeveloperProfileEditor() {
               <label className="block text-sm font-medium text-slate-700 mb-2">Display Name</label>
               <input 
                 type="text" 
-                value={profile.name}
+                value={profile.name || ''}
                 onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue focus:border-academic-blue transition-all"
                 placeholder="e.g. John Doe"
@@ -624,7 +639,7 @@ function DeveloperProfileEditor() {
               <label className="block text-sm font-medium text-slate-700 mb-2">Role / Title</label>
               <input 
                 type="text" 
-                value={profile.role}
+                value={profile.role || ''}
                 onChange={(e) => setProfile(prev => ({ ...prev, role: e.target.value }))}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue focus:border-academic-blue transition-all"
                 placeholder="e.g. Full Stack Developer"
@@ -635,7 +650,7 @@ function DeveloperProfileEditor() {
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">Bio / About Me</label>
             <textarea 
-              value={profile.bio}
+              value={profile.bio || ''}
               onChange={(e) => setProfile(prev => ({ ...prev, bio: e.target.value }))}
               rows={5}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue focus:border-academic-blue transition-all resize-none"
@@ -662,7 +677,7 @@ function DeveloperProfileEditor() {
                   <label className="block text-xs font-medium text-slate-500 mb-1 capitalize">{key}</label>
                   <input 
                     type="url" 
-                    value={profile.socials[key as keyof typeof profile.socials]}
+                    value={profile.socials[key as keyof typeof profile.socials] || ''}
                     onChange={(e) => handleSocialChange(key, e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-200 focus:ring-2 focus:ring-academic-blue focus:border-academic-blue transition-all text-sm"
                     placeholder={`https://${key}.com/...`}
@@ -1082,6 +1097,15 @@ function FeedbackManager({ onDelete }: { onDelete: (id: string, type: 'message' 
     onDelete(id, 'feedback');
   };
 
+  const toggleStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'read' ? 'new' : 'read';
+    try {
+      await updateDoc(doc(db, 'feedback', id), { status: newStatus });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `feedback/${id}`);
+    }
+  };
+
   if (loading) {
     return <div className="py-12 text-center text-slate-500">Loading feedback...</div>;
   }
@@ -1107,7 +1131,7 @@ function FeedbackManager({ onDelete }: { onDelete: (id: string, type: 'message' 
           <p className="text-slate-500 text-center py-8">No feedback found.</p>
         ) : (
           feedbacks.map(feedback => (
-            <div key={feedback.id} className="p-4 border border-slate-200 rounded-2xl flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+            <div key={feedback.id} className={`p-4 border transition-all rounded-2xl flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center ${feedback.status === 'new' ? 'bg-blue-50/30 border-blue-100 shadow-sm' : 'bg-white border-slate-200'}`}>
               <div>
                 <div className="flex items-center gap-2 mb-2">
                   <span className={`px-2 py-1 text-xs font-bold uppercase rounded-full ${
@@ -1126,13 +1150,22 @@ function FeedbackManager({ onDelete }: { onDelete: (id: string, type: 'message' 
                   <p className="text-sm text-slate-500">From: {feedback.userEmail}</p>
                 )}
               </div>
-              <button
-                onClick={() => handleDelete(feedback.id)}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors shrink-0"
-                title="Delete Feedback"
-              >
-                <Trash2 size={20} />
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button 
+                  onClick={() => toggleStatus(feedback.id, feedback.status)}
+                  className={`p-2 rounded-lg transition-colors ${feedback.status === 'new' ? 'text-blue-600 hover:bg-blue-100' : 'text-slate-400 hover:bg-slate-100'}`}
+                  title={feedback.status === 'new' ? "Mark as read" : "Mark as unread"}
+                >
+                  {feedback.status === 'new' ? <MessageSquare size={18} /> : <CheckCircle2 size={18} />}
+                </button>
+                <button
+                  onClick={() => handleDelete(feedback.id)}
+                  className="p-2 text-red-500 hover:bg-red-50 rounded-xl transition-colors"
+                  title="Delete Feedback"
+                >
+                  <Trash2 size={20} />
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -1252,7 +1285,8 @@ function SystemSettingsManager() {
     siteName: 'Update Students',
     maintenanceMode: false,
     contactEmail: 'support@updatestudents.com',
-    allowRegistration: true
+    allowRegistration: true,
+    telegramLink: 'https://t.me/updatestudents'
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1312,7 +1346,7 @@ function SystemSettingsManager() {
             <label className="text-sm font-bold text-slate-700">Site Name</label>
             <input 
               type="text" 
-              value={settings.siteName}
+              value={settings.siteName || ''}
               onChange={(e) => setSettings({...settings, siteName: e.target.value})}
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
             />
@@ -1321,9 +1355,19 @@ function SystemSettingsManager() {
             <label className="text-sm font-bold text-slate-700">Contact Email</label>
             <input 
               type="email" 
-              value={settings.contactEmail}
+              value={settings.contactEmail || ''}
               onChange={(e) => setSettings({...settings, contactEmail: e.target.value})}
               className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700">Telegram Link</label>
+            <input 
+              type="url" 
+              value={settings.telegramLink || ''}
+              onChange={(e) => setSettings({...settings, telegramLink: e.target.value})}
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
+              placeholder="https://t.me/yourchannel"
             />
           </div>
         </div>

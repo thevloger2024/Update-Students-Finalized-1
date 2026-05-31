@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GraduationCap, LogIn, LogOut, User, Search, X, Bookmark, MessageSquarePlus, Bell, Shield, Settings, Languages, ChevronDown, Wrench, History } from 'lucide-react';
+import { GraduationCap, LogIn, LogOut, User, Search, X, Bookmark, MessageSquarePlus, Bell, Shield, Settings, Languages, ChevronDown, Wrench, History, Sun, Moon, Calendar } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth, signInWithGoogle, logOut } from '../firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { FeedbackModal } from './FeedbackModal';
 import { useLanguage, Language } from '../contexts/LanguageContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { TranslatedText } from './TranslatedText';
 import { cn } from '../contexts/utils';
 import { toast } from 'sonner';
+import { useAdminNotifications } from '../hooks/useAdminNotifications';
 
 const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
@@ -29,8 +31,12 @@ export function Header() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   const { language, setLanguage, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isAdmin = user?.email === ADMIN_EMAIL;
+  const { unreadCount } = useAdminNotifications(isAdmin);
 
   const languages: { code: Language; name: string; native: string }[] = [
     { code: 'en', name: 'English', native: 'English' },
@@ -218,6 +224,13 @@ export function Header() {
           </form>
           
           <div className="flex items-center gap-4 shrink-0">
+            <button
+              onClick={toggleTheme}
+              className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all btn-hover-effect"
+              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
             <Link 
               to="/tools" 
               className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-academic-blue transition-colors btn-hover-effect px-2 py-1 rounded-lg"
@@ -225,6 +238,22 @@ export function Header() {
             >
               <Wrench size={18} />
               <span className="hidden sm:inline">{t('tools')}</span>
+            </Link>
+            <Link
+              to="/exam-calendar"
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-academic-blue transition-colors btn-hover-effect px-2 py-1 rounded-lg"
+              title="Exam Calendar"
+            >
+              <Calendar size={18} />
+              <span className="hidden lg:inline">Calendar</span>
+            </Link>
+            <Link
+              to="/saved"
+              className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-academic-blue transition-colors btn-hover-effect px-2 py-1 rounded-lg"
+              title={t('saved')}
+            >
+              <Bookmark size={18} />
+              <span className="hidden sm:inline">{t('saved')}</span>
             </Link>
             <button 
               onClick={() => setIsFeedbackOpen(true)}
@@ -256,11 +285,16 @@ export function Header() {
                 </Link>
                 <Link 
                   to="/admin/features" 
-                  className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-academic-blue transition-colors btn-hover-effect px-2 py-1 rounded-lg"
+                  className="relative flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-academic-blue transition-colors btn-hover-effect px-2 py-1 rounded-lg"
                   title={t('features')}
                 >
                   <Settings size={18} />
                   <span className="hidden sm:inline">{t('features')}</span>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-white shadow-sm ring-2 ring-white">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
                 </Link>
               </div>
             )}
@@ -306,15 +340,6 @@ export function Header() {
                         >
                           <Wrench size={16} />
                           <span className="font-medium">{t('tools')}</span>
-                        </Link>
-                        
-                        <Link 
-                          to="/saved" 
-                          onClick={() => setIsProfileMenuOpen(false)}
-                          className="w-full px-4 py-2 text-left text-sm flex items-center gap-3 text-slate-600 hover:bg-slate-50 hover:text-academic-blue transition-colors"
-                        >
-                          <Bookmark size={16} />
-                          <span className="font-medium">{t('saved')}</span>
                         </Link>
                         
                         <Link 

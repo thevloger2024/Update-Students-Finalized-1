@@ -1,12 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { cn, formatDate } from '../contexts/utils';
-import { Bookmark, Share2, Star, Sparkles } from 'lucide-react';
+import { cn, formatDate, timeAgo } from '../contexts/utils';
+import { Bookmark, Share2, Star, Sparkles, MessageCircle, Clock, Flame } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBookmarkContext } from '../contexts/BookmarkContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from './TranslatedText';
+import { CountdownBadge } from './CountdownBadge';
 
 export interface ApplicationFee {
   category: string;
@@ -41,6 +42,7 @@ export interface UpdateData {
   postVacancies?: PostVacancy[];
   featured?: boolean;
   createdAt: number;
+  views?: number;
   thumbnail?: string;
   steps?: {
     text: string;
@@ -54,12 +56,14 @@ interface UpdateCardProps {
 
 export const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
   const { t } = useLanguage();
-  const { bookmarks, toggleBookmark, isAuthenticated } = useBookmarkContext();
+  const { bookmarks, toggleBookmark } = useBookmarkContext();
   const isBookmarked = bookmarks[update.id];
 
   const isNew = update.updateDate ? 
     (new Date().getTime() - new Date(update.updateDate).getTime()) < 48 * 60 * 60 * 1000 : 
-    false;
+    (new Date().getTime() - update.createdAt) < 48 * 60 * 60 * 1000;
+
+  const isHot = (update.views || 0) > 50; // Hot if views > 50
 
   const handleBookmark = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -96,6 +100,14 @@ export const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
     }
   };
 
+  const handleWhatsappShare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const url = `${window.location.origin}/update/${update.id}`;
+    const txt = `🎯 ${update.title} | Last Date: ${update.endDate ? formatDate(update.endDate, t('language') as any || 'en') : 'Not Specified'} | Apply: ${url} via UpdateStudents`;
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`, '_blank');
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -107,32 +119,46 @@ export const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
       className="bg-white border border-slate-200 rounded-lg shadow-sm transition-all duration-200 overflow-hidden flex flex-col min-h-[160px] relative group"
     >
       <div className="absolute top-2 right-2 flex flex-col gap-2 z-10">
-        {isNew && (
-          <div className="flex items-center gap-1 bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider animate-pulse shadow-sm">
-            <Sparkles size={10} />
-            {t('new')}
-          </div>
-        )}
+        <div className="flex gap-2">
+          {isNew && (
+            <div className="flex items-center gap-1 bg-red-50 text-red-600 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider animate-pulse shadow-sm">
+              <Sparkles size={10} />
+              {t('new')}
+            </div>
+          )}
+          {isHot && (
+            <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-sm">
+              <Flame size={10} />
+              HOT
+            </div>
+          )}
+        </div>
         {update.featured && (
           <div className="p-1.5 rounded-full bg-academic-gold text-white shadow-sm" title={t('featuredUpdate')}>
             <Star size={12} fill="currentColor" />
           </div>
         )}
-        {isAuthenticated && (
-          <button
-            onClick={handleBookmark}
-            className={cn(
-              "p-1.5 rounded-full transition-all duration-200 btn-hover-effect",
-              isBookmarked 
-                ? "text-academic-gold bg-yellow-50 shadow-sm" 
-                : "text-slate-300 hover:text-academic-gold hover:bg-slate-50 opacity-0 group-hover:opacity-100"
-            )}
-            title={isBookmarked ? t('removeBookmark') : t('saveUpdate')}
-          >
-            <Bookmark size={16} fill={isBookmarked ? "currentColor" : "none"} />
-          </button>
-        )}
+        <button
+          onClick={handleBookmark}
+          className={cn(
+            "p-1.5 rounded-full transition-all duration-200 btn-hover-effect",
+            isBookmarked 
+              ? "text-academic-gold bg-yellow-50 shadow-sm" 
+              : "text-slate-300 hover:text-academic-gold hover:bg-slate-50 opacity-0 group-hover:opacity-100"
+          )}
+          title={isBookmarked ? t('removeBookmark') : t('saveUpdate')}
+        >
+          <Bookmark size={16} fill={isBookmarked ? "currentColor" : "none"} />
+        </button>
         
+        <button
+          onClick={handleWhatsappShare}
+          className="p-1.5 rounded-full text-slate-300 hover:text-green-500 hover:bg-green-50 opacity-0 group-hover:opacity-100 transition-all duration-200 btn-hover-effect"
+          title="Share on WhatsApp"
+        >
+          <MessageCircle size={16} />
+        </button>
+
         <button
           onClick={handleShare}
           className="p-1.5 rounded-full text-slate-300 hover:text-academic-blue hover:bg-slate-50 opacity-0 group-hover:opacity-100 transition-all duration-200 btn-hover-effect"
@@ -142,7 +168,12 @@ export const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
         </button>
       </div>
       
-      <div className="flex-1 p-4 flex flex-col justify-between">
+      <div className="flex-1 p-4 flex flex-col justify-between relative pt-8 md:pt-4">
+        {update.endDate && (
+          <div className="mb-2">
+            <CountdownBadge lastDate={update.endDate} />
+          </div>
+        )}
         <div className="flex items-start justify-between gap-2">
           <Link to={`/update/${update.id}`} className="flex-1">
             <TranslatedText 
@@ -194,6 +225,11 @@ export const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
                 {update.releaseDate && <span>{t('released')}: {formatDate(update.releaseDate)}</span>}
               </div>
             )}
+            
+            <div className="flex items-center gap-1 text-[9px] md:text-[10px] text-slate-400 mt-2">
+              <Clock size={10} />
+              <span>Updated: {timeAgo(update.updateDate || update.createdAt)}</span>
+            </div>
           </div>
         </div>
       </div>

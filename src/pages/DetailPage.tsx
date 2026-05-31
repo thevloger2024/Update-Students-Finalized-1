@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Header } from '../components/Header';
 import { UpdateData, ApplicationFee, PostVacancy } from '../components/UpdateCard';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ArrowLeft, Calendar, Building2, Users, MapPin, Bookmark, Share2, ImageIcon, CheckCircle, AlertCircle, HelpCircle, Languages, Plus, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -135,6 +135,15 @@ export function DetailPage() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setUpdate({ id: docSnap.id, ...docSnap.data() } as UpdateData);
+          
+          // Increment view count
+          try {
+            await updateDoc(docRef, {
+              views: increment(1)
+            });
+          } catch (e) {
+            console.error("View count increment failed:", e);
+          }
         } else {
           console.log("No such document!");
         }

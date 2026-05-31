@@ -1,15 +1,4 @@
 import { useState, useEffect } from 'react';
-import { db, auth } from '../firebase';
-import { 
-  doc, 
-  setDoc, 
-  deleteDoc, 
-  onSnapshot, 
-  collection,
-  query,
-  orderBy
-} from 'firebase/firestore';
-import { onAuthStateChanged } from 'firebase/auth';
 import { UpdateData } from '../components/UpdateCard';
 
 export interface BookmarkData {
@@ -23,74 +12,58 @@ export function useBookmarks() {
   const [bookmarks, setBookmarks] = useState<Record<string, boolean>>({});
   const [bookmarkedUpdates, setBookmarkedUpdates] = useState<BookmarkData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        setUserId(user.uid);
-      } else {
-        setUserId(null);
-        setBookmarks({});
-        setBookmarkedUpdates([]);
-        setLoading(false);
-      }
-    });
+    // Initial load from localStorage
+    try {
+      const stored = localStorage.getItem('user_bookmarks');
+      if (stored) {
+        const parsed: BookmarkData[] = JSON.parse(stored);
+        
+        const newBookmarks: Record<string, boolean> = {};
+        parsed.forEach(b => {
+          newBookmarks[b.updateId] = true;
+        });
 
-    return () => unsubscribeAuth();
+        setBookmarks(newBookmarks);
+        setBookmarkedUpdates(parsed);
+      }
+    } catch (err) {
+      console.error('Failed to load bookmarks', err);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    if (!userId) return;
-
-    const bookmarksRef = collection(db, `users/${userId}/bookmarks`);
-    const q = query(bookmarksRef, orderBy('createdAt', 'desc'));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newBookmarks: Record<string, boolean> = {};
-      const newBookmarkedUpdates: BookmarkData[] = [];
-      
-      snapshot.forEach((doc) => {
-        const data = doc.data() as BookmarkData;
-        newBookmarks[data.updateId] = true;
-        newBookmarkedUpdates.push(data);
-      });
-
-      setBookmarks(newBookmarks);
-      setBookmarkedUpdates(newBookmarkedUpdates);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching bookmarks:", error);
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [userId]);
-
   const toggleBookmark = async (update: UpdateData) => {
-    if (!userId) return;
-
-    const bookmarkRef = doc(db, `users/${userId}/bookmarks`, update.id);
-
-    if (bookmarks[update.id]) {
-      try {
-        await deleteDoc(bookmarkRef);
-      } catch (error) {
-        console.error("Error removing bookmark:", error);
-      }
-    } else {
-      try {
-        await setDoc(bookmarkRef, {
+    setBookmarkedUpdates(prev => {
+      let updated: BookmarkData[];
+      const exists = prev.some(b => b.updateId === update.id);
+      
+      if (exists) {
+        updated = prev.filter(b => b.updateId !== update.id);
+      } else {
+        updated = [{
           updateId: update.id,
           title: update.title,
           type: update.type,
           createdAt: Date.now()
-        });
-      } catch (error) {
-        console.error("Error adding bookmark:", error);
+        }, ...prev];
       }
-    }
+
+      // Update maps
+      const newBookmarks: Record<string, boolean> = {};
+      updated.forEach(b => {
+        newBookmarks[b.updateId] = true;
+      });
+      setBookmarks(newBookmarks);
+
+      // Save to localStorage
+      localStorage.setItem('user_bookmarks', JSON.stringify(updated));
+
+      return updated;
+    });
   };
 
-  return { bookmarks, bookmarkedUpdates, toggleBookmark, loading, isAuthenticated: !!userId };
+  return { bookmarks, bookmarkedUpdates, toggleBookmark, loading, isAuthenticated: true };
 }

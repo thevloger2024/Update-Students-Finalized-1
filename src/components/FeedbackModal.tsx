@@ -35,6 +35,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
         type,
         message: message.trim(),
         createdAt: Date.now(),
+        status: 'new'
       };
 
       if (user?.uid) feedbackData.userId = user.uid;
