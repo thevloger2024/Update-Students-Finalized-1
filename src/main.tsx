@@ -29,6 +29,11 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { ErrorBoundary } from './components/ErrorBoundary.tsx';
+import { initErrorReporter } from './utils/errorReporter.ts';
+
+// 🚨 F6D: Initialize client-side error reporter
+// This captures JS errors and sends them to server → admin email alerts
+initErrorReporter();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

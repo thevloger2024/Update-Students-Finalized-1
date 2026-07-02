@@ -17,6 +17,8 @@ import { AdSenseAnalytics } from '../components/AdSenseAnalytics';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import { SystemSettingsManager } from '../components/SystemSettingsManager';
 import { validateForm } from '../utils/validation';
+import { AdminAIChatbot } from '../components/AdminAIChatbot';
+import { ImageAnalyzer } from '../components/ImageAnalyzer';
 
 const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
@@ -2123,6 +2125,16 @@ export function AdminPage() {
           </div>
         )}
       </AnimatePresence>
+      {/* 🤖 AI Admin Chatbot — available on all admin pages */}
+      {isAdmin && (
+        <AdminAIChatbot
+          websiteContext={{ adminEmail: ADMIN_EMAIL, page: 'admin' }}
+          onActionRequest={(action) => {
+            console.log('Admin AI action requested:', action);
+            toast.info(`AI action: ${action.type}`, { duration: 3000 });
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -6,13 +6,15 @@ import { doc, getDoc, setDoc, collection, query, onSnapshot, limit, updateDoc, g
 // import removed
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle, Linkedin, Mail, CheckCircle2, Clock, ExternalLink, UserCheck, UserMinus, ShieldAlert, Send, MessageSquare, User as UserIcon } from 'lucide-react';
+import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle, Linkedin, Mail, CheckCircle2, Clock, ExternalLink, UserCheck, UserMinus, ShieldAlert, Send, MessageSquare, User as UserIcon, Brain } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from '../components/TranslatedText';
 import { signInWithGoogle, logOut } from '../firebase';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import { SystemSettingsManager } from '../components/SystemSettingsManager';
+import { AdminAIChatbot } from '../components/AdminAIChatbot';
+import { WebsiteIntelligencePanel } from '../components/WebsiteIntelligencePanel';
 
 const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
@@ -203,6 +205,15 @@ export function AdminFeaturesPage() {
       color: "bg-red-50 text-red-600",
       status: "Active",
       badgeCount: unreadMessages
+    },
+    {
+      id: 'intelligence',
+      title: "🧠 Website Intelligence",
+      description: "Autonomous AI that monitors, publishes, and manages your website. Uses Google Search to find trending topics and auto-generates posts.",
+      icon: Brain,
+      color: "bg-gradient-to-br from-blue-50 to-purple-50 text-purple-600",
+      status: "Active",
+      badgeCount: 0
     }
   ];
 
@@ -244,6 +255,10 @@ export function AdminFeaturesPage() {
           <UserManager />
         ) : activeFeature === 'system' ? (
           <SystemSettingsManager />
+        ) : activeFeature === 'intelligence' ? (
+          <div className="space-y-6">
+            <WebsiteIntelligencePanel />
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, index) => {
@@ -292,6 +307,14 @@ export function AdminFeaturesPage() {
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/5 -ml-16 -mb-16 rounded-full" />
         </div>
       </main>
+      {/* 🤖 AI Admin Chatbot */}
+      <AdminAIChatbot
+        websiteContext={{ adminEmail: ADMIN_EMAIL, page: 'admin-features' }}
+        onActionRequest={(action) => {
+          console.log('Admin AI action:', action);
+          toast.info(`AI action: ${action.type}`, { duration: 3000 });
+        }}
+      />
       {/* Confirmation Modal */}
       <AnimatePresence>
         {showDeleteConfirm && (
