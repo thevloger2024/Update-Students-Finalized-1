@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
+import { aiClient, HIGH_THINKING_CONFIG } from '../utils/geminiClient';
 
 interface StreamingAIOptions {
   onChunk?: (chunk: string) => void;
@@ -16,7 +17,7 @@ interface StreamingAIResult {
 }
 
 /**
- * React hook for consuming streaming AI responses from /api/gemini/stream
+ * React hook for consuming streaming AI responses directly via Gemini Client SDK
  * Provides real-time token display with stop/reset capabilities
  */
 export function useStreamingAI(options: StreamingAIOptions = {}): StreamingAIResult {
@@ -45,47 +46,23 @@ export function useStreamingAI(options: StreamingAIOptions = {}): StreamingAIRes
     let fullText = '';
 
     try {
-      const response = await fetch('/api/gemini/stream', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, systemInstruction }),
-        signal: abortControllerRef.current.signal,
+      const responseStream = await aiClient.models.generateContentStream({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          systemInstruction,
+          ...HIGH_THINKING_CONFIG
+        }
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error: ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-
-      if (!reader) throw new Error('No response body');
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.slice(6).trim();
-            if (dataStr === '[DONE]') break;
-
-            try {
-              const data = JSON.parse(dataStr);
-              if (data.text) {
-                fullText += data.text;
-                setText(fullText);
-                options.onChunk?.(data.text);
-              } else if (data.error) {
-                throw new Error(data.error);
-              }
-            } catch (parseErr) {
-              // skip malformed SSE chunks
-            }
-          }
+      for await (const chunk of responseStream) {
+        if (abortControllerRef.current?.signal.aborted) {
+          break;
+        }
+        if (chunk.text) {
+          fullText += chunk.text;
+          setText(fullText);
+          options.onChunk?.(chunk.text);
         }
       }
 
@@ -107,39 +84,4 @@ export function useStreamingAI(options: StreamingAIOptions = {}): StreamingAIRes
   }, [options]);
 
   return { text, isStreaming, error, stream, stop, reset };
-}
-
-/**
- * Utility: Parse SSE stream from fetch response
- * Low-level helper for custom streaming implementations
- */
-export async function* parseSSEStream(response: Response): AsyncGenerator<string> {
-  const reader = response.body?.getReader();
-  const decoder = new TextDecoder();
-  if (!reader) return;
-
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n');
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const dataStr = line.slice(6).trim();
-          if (dataStr === '[DONE]') return;
-          try {
-            const data = JSON.parse(dataStr);
-            if (data.text) yield data.text;
-          } catch {
-            // skip
-          }
-        }
-      }
-    }
-  } finally {
-    reader.releaseLock();
-  }
 }

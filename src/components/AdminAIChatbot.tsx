@@ -125,58 +125,59 @@ export function AdminAIChatbot({ websiteContext = {}, onActionRequest }: AdminAI
     abortControllerRef.current = new AbortController();
 
     try {
-      const response = await fetch('/api/gemini/admin-chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text.trim(),
-          conversationHistory,
-          websiteContext,
-        }),
-        signal: abortControllerRef.current.signal,
+      const { aiClient, HIGH_THINKING_CONFIG } = await import('../utils/geminiClient');
+
+      // Convert conversation history to Gemini format
+      const geminiHistory = conversationHistory.map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }));
+
+      geminiHistory.push({
+        role: 'user',
+        parts: [{ text: text.trim() }]
       });
 
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const systemInstruction = `You are a helpful admin assistant for "Update Students", an Indian government jobs and education portal.
+You have access to the website database (Firestore) and UI actions.
+Admin Email: ${websiteContext?.adminEmail || 'Unknown'}
+Current Page: ${websiteContext?.page || 'Unknown'}
 
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
+You can trigger UI actions by returning a JSON block formatted EXACTLY like this at the end of your message:
+\`\`\`action
+{
+  "type": "create_post" | "generate_quiz" | "fetch_trends" | "show_stats",
+  "data": { "topic": "SSC CGL", "category": "job" }
+}
+\`\`\`
+Always be concise, polite, and use Markdown for formatting.`;
+
       let fullText = '';
+      const responseStream = await aiClient.models.generateContentStream({
+        model: 'gemini-2.5-flash',
+        contents: geminiHistory,
+        config: {
+          systemInstruction,
+          ...HIGH_THINKING_CONFIG
+        }
+      });
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const dataStr = line.slice(6).trim();
-              if (dataStr === '[DONE]') break;
-              try {
-                const data = JSON.parse(dataStr);
-                if (data.text) {
-                  fullText += data.text;
-                  setMessages(prev =>
-                    prev.map(m =>
-                      m.id === assistantMessage.id
-                        ? { ...m, content: fullText, isStreaming: true }
-                        : m
-                    )
-                  );
-                } else if (data.error) {
-                  throw new Error(data.error);
-                }
-              } catch (parseErr) {
-                // skip malformed chunks
-              }
-            }
-          }
+      for await (const chunk of responseStream) {
+        if (abortControllerRef.current?.signal.aborted) break;
+        if (chunk.text) {
+          fullText += chunk.text;
+          setMessages(prev =>
+            prev.map(m =>
+              m.id === assistantMessage.id
+                ? { ...m, content: fullText, isStreaming: true }
+                : m
+            )
+          );
         }
       }
 
       // Parse action blocks from final response
+
       const { cleanContent, action } = parseActionBlock(fullText);
 
       setMessages(prev =>

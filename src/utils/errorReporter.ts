@@ -51,17 +51,15 @@ export async function reportError(error: ErrorReport): Promise<void> {
       return;
     }
 
-    await fetch(REPORT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ...error,
-        url: error.url || window.location.href,
-        userAgent: navigator.userAgent,
-        timestamp: new Date().toISOString(),
-      }),
-      // Use keepalive so the request survives page unloads
-      keepalive: true,
+    const { db } = await import('../firebase');
+    const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
+
+    await addDoc(collection(db, 'client_errors'), {
+      ...error,
+      url: error.url || window.location.href,
+      userAgent: navigator.userAgent,
+      timestamp: serverTimestamp(),
+      status: 'new'
     });
   } catch {
     // Silently fail — don't cause recursive error reporting

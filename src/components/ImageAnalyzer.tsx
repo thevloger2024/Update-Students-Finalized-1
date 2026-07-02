@@ -94,15 +94,41 @@ export function ImageAnalyzer({ onTagsApply, onTitleApply, onCategoryApply, comp
     setIsAnalyzing(true);
     setResult(null);
     try {
-      const response = await fetch('/api/gemini/analyze-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base64Data, mimeType }),
+      // Import the browser-compatible client
+      const { aiClient, HIGH_THINKING_CONFIG } = await import('../utils/geminiClient');
+      
+      const prompt = `Analyze this image for an Indian government jobs/education portal.
+Return ONLY a valid JSON object matching this schema:
+{
+  "description": "Brief visual description of the image",
+  "extractedText": "Any text visible in the image (OCR), or empty string",
+  "suggestedTitle": "A catchy, SEO-friendly title based on the image content (e.g., 'SSC CGL 2024 Notification Released')",
+  "suggestedTags": ["tag1", "tag2", "tag3"],
+  "suggestedCategory": "One of: job, admit_card, result, scholarship, quiz, other",
+  "qualityScore": number from 0 to 100 representing image clarity and quality,
+  "qualityFeedback": "One sentence on how to improve the image (e.g., 'Image is slightly blurry, consider a higher resolution version.')",
+  "dominantColors": ["#hexcode1", "#hexcode2"],
+  "contentType": "e.g., Logo, Notification Screenshot, Infographic, Photo",
+  "isAppropriate": boolean (true if safe for work and relevant, false if inappropriate)
+}`;
+
+      const response = await aiClient.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+          prompt,
+          { inlineData: { data: base64Data, mimeType } }
+        ],
+        config: {
+          responseMimeType: 'application/json',
+          ...HIGH_THINKING_CONFIG
+        }
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      if (data.error) throw new Error(data.error);
-      setResult(data);
+
+      const text = response.text || '{}';
+      const cleanJson = text.replace(/```json\n?|\n?```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+      
+      setResult(parsed);
       toast.success('Image analyzed successfully!');
     } catch (err: any) {
       toast.error(`Analysis failed: ${err.message}`);
