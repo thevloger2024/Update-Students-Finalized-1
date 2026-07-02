@@ -2,10 +2,16 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
-import * as nodemailer from 'nodemailer';
+import nodemailer from 'nodemailer';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
+
+// Support both GEMINI_API_KEY (server) and VITE_GEMINI_API_KEY (GitHub Actions secret)
+if (!process.env.GEMINI_API_KEY && process.env.VITE_GEMINI_API_KEY) {
+  process.env.GEMINI_API_KEY = process.env.VITE_GEMINI_API_KEY;
+}
+
 
 // ─────────────────────────────────────────────────────────────
 // 🧠 CENTRALIZED AI CLIENT WITH HIGH THINKING ENABLED
