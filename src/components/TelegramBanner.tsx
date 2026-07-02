@@ -11,7 +11,13 @@ export function TelegramBanner() {
 
   useEffect(() => {
     // Check if dismissed in this session
-    const hasSeen = sessionStorage.getItem('telegram_banner_seen');
+    let hasSeen = false;
+    try {
+      hasSeen = !!sessionStorage.getItem('telegram_banner_seen');
+    } catch (e) {
+      console.warn('sessionStorage error', e);
+    }
+    
     if (!hasSeen) {
       // Small delay so it pops up after initial render
       const timer = setTimeout(() => {
@@ -23,7 +29,11 @@ export function TelegramBanner() {
 
   const handleDismiss = () => {
     setIsVisible(false);
-    sessionStorage.setItem('telegram_banner_seen', 'true');
+    try {
+      sessionStorage.setItem('telegram_banner_seen', 'true');
+    } catch (e) {
+      console.warn('sessionStorage error', e);
+    }
   };
 
   const handleJoin = () => {

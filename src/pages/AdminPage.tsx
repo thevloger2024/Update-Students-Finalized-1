@@ -10,11 +10,13 @@ import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signInWithGoogle, logOut } from '../firebase';
 import { formatDate } from '../contexts/utils';
-import { GoogleGenAI } from "@google/genai";
+// import removed
 import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from '../components/TranslatedText';
 import { AdSenseAnalytics } from '../components/AdSenseAnalytics';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
+import { SystemSettingsManager } from '../components/SystemSettingsManager';
+import { validateForm } from '../utils/validation';
 
 const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
@@ -89,16 +91,53 @@ export function AdminPage() {
   const [deleteType, setDeleteType] = useState<'update' | 'social'>('update');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedThumbnails, setGeneratedThumbnails] = useState<string[]>([]);
-  const [form, setForm] = useState<UpdateForm>(INITIAL_FORM);
+  const [form, setForm] = useState<UpdateForm>(() => {
+    try {
+      const saved = localStorage.getItem('adminDraftForm');
+      if (saved) {
+        return { ...INITIAL_FORM, ...JSON.parse(saved) };
+      }
+    } catch (err) {
+      console.warn('localStorage error', err);
+    }
+    return INITIAL_FORM;
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('adminDraftForm', JSON.stringify(form));
+    } catch (err) {
+      console.warn('localStorage error', err);
+    }
+  }, [form]);
   const [updates, setUpdates] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [sortField, setSortField] = useState<string>('createdAt');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('adminDraftEditingId');
+    } catch (err) {
+      console.warn('localStorage error', err);
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      if (editingId) {
+        localStorage.setItem('adminDraftEditingId', editingId);
+      } else {
+        localStorage.removeItem('adminDraftEditingId');
+      }
+    } catch (err) {
+      console.warn('localStorage error', err);
+    }
+  }, [editingId]);
   const [showPreview, setShowPreview] = useState(false);
-  const [activeTab, setActiveTab] = useState<'updates' | 'social' | 'adsense'>('updates');
+  const [activeTab, setActiveTab] = useState<'updates' | 'social' | 'adsense' | 'settings'>('updates');
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [socialForm, setSocialForm] = useState<Omit<SocialLink, 'id'>>({
     platform: 'WhatsApp',
@@ -202,6 +241,12 @@ export function AdminPage() {
 
   const handleSocialSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!validateForm('admin-social-form')) {
+      toast.error('⚠️ Please fill in all required fields before submitting.');
+      return;
+    }
+
     setSubmitting(true);
     try {
       if (editingSocialId) {
@@ -312,6 +357,12 @@ export function AdminPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm('admin-update-form')) {
+      toast.error('⚠️ Please fill in all required fields before submitting.');
+      return;
+    }
+    
     if (!user) return;
     
     setSubmitting(true);
@@ -471,12 +522,6 @@ export function AdminPage() {
       setAiStatus('analyzing');
       toast.loading(t('analyzingData') || "AI is analyzing and writing content...", { id: toastId });
 
-      // 2. Call Gemini
-      const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) throw new Error(t('geminiKeyMissing'));
-
-      const ai = new GoogleGenAI({ apiKey });
-      
       const prompt = `You are an expert content writer and data extractor for an educational updates portal.
       I need you to gather information about the following update:
       Title/Topic: "${aiTitle}"
@@ -502,15 +547,19 @@ export function AdminPage() {
       
       If any specific data is not found, leave it empty or null.`;
 
-      const aiResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-          tools: [{ googleSearch: {} }]
-        }
-      } as any);
+      // 2. Call Gemini Backend
+      const response = await fetch('/api/gemini/auto-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to auto-fill');
+      }
 
-      let jsonText = aiResponse.text || "{}";
+      let jsonText = data.text || "{}";
       // Clean up markdown if Gemini accidentally included it
       jsonText = jsonText.replace(/```json/g, '').replace(/```/g, '').trim();
       
@@ -570,66 +619,30 @@ export function AdminPage() {
   };
 
   const generateAIVariations = async (baseImage: string) => {
-    if (!process.env.GEMINI_API_KEY) {
-      toast.error(t('geminiKeyMissing'));
-      return;
-    }
-    
     setIsGenerating(true);
     setGeneratedThumbnails([]);
     
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const base64Data = baseImage.split(',')[1];
       const mimeType = baseImage.split(';')[0].split(':')[1];
 
-      const prompts = [
-        'Generate a variation of this thumbnail with a different color palette but keeping the same professional theme.',
-        'Generate a variation of this thumbnail with a more modern and minimalist layout.',
-        'Generate a variation of this thumbnail with more vibrant and energetic visual elements.'
-      ];
-
-      const results = await Promise.all(prompts.map(prompt => 
-        ai.models.generateContent({
-          model: 'gemini-3.1-flash-image-preview',
-          contents: {
-            parts: [
-              {
-                inlineData: {
-                  data: base64Data,
-                  mimeType: mimeType,
-                },
-              },
-              {
-                text: prompt,
-              },
-            ],
-          },
-          config: {
-            imageConfig: {
-              aspectRatio: "16:9",
-              imageSize: "1K"
-            }
-          }
-        })
-      ));
-
-      const newThumbnails: string[] = [];
-      results.forEach(response => {
-        if (response.candidates?.[0]?.content?.parts) {
-          for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-              newThumbnails.push(`data:image/png;base64,${part.inlineData.data}`);
-            }
-          }
-        }
+      const response = await fetch('/api/gemini/variations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64Data, mimeType })
       });
       
-      if (newThumbnails.length > 0) {
-        setGeneratedThumbnails(newThumbnails);
-        toast.success(t('aiVariationsGenerated'));
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate');
+      }
+
+      if (data.thumbnails && data.thumbnails.length > 0) {
+        setGeneratedThumbnails(data.thumbnails);
+        toast.success(t('aiVariationsGenerated') || 'Variations generated successfully');
       } else {
-        toast.error(t('noAiVariations'));
+        toast.error(t('noAiVariations') || 'Failed to generate variations');
       }
     } catch (error) {
       console.error("AI Generation error:", error);
@@ -654,42 +667,22 @@ export function AdminPage() {
     setGeneratedThumbnails([]);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      
-      const prompts = [
-        `Generate a professional thumbnail for a ${form.category} update titled "${form.title}". Style: Modern, clean, and corporate.`,
-        `Generate a professional thumbnail for a ${form.category} update titled "${form.title}". Style: Vibrant, energetic, and eye-catching.`,
-        `Generate a professional thumbnail for a ${form.category} update titled "${form.title}". Style: Minimalist, elegant, and academic.`
-      ];
-
-      const results = await Promise.all(prompts.map(prompt => 
-        ai.models.generateContent({
-          model: 'gemini-3.1-flash-image-preview',
-          contents: {
-            parts: [{ text: prompt }],
-          },
-          config: {
-            imageConfig: {
-              aspectRatio: "16:9",
-              imageSize: "1K"
-            }
-          }
+      const response = await fetch('/api/gemini/thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `Generate a professional thumbnail for a ${form.category} update titled "${form.title}". Style: Modern, clean, and corporate.`
         })
-      ));
-
-      const newThumbnails: string[] = [];
-      results.forEach(response => {
-        if (response.candidates?.[0]?.content?.parts) {
-          for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-              newThumbnails.push(`data:image/png;base64,${part.inlineData.data}`);
-            }
-          }
-        }
       });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate');
+      }
 
-      if (newThumbnails.length > 0) {
-        setGeneratedThumbnails(newThumbnails);
+      if (data.thumbnails && data.thumbnails.length > 0) {
+        setGeneratedThumbnails(data.thumbnails);
         toast.success(t('defaultThumbnailsGenerated'));
       } else {
         toast.error(t('failedDefaultThumbnail'));
@@ -851,6 +844,12 @@ export function AdminPage() {
             {t('manageUpdates')}
           </button>
           <button
+            onClick={() => setActiveTab('settings')}
+            className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-academic-blue text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            System Settings
+          </button>
+          <button
             onClick={() => setActiveTab('social')}
             className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'social' ? 'bg-academic-blue text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
           >
@@ -961,7 +960,7 @@ export function AdminPage() {
                 )}
               </AnimatePresence>
               
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form id="admin-update-form" onSubmit={handleSubmit} className="space-y-6">
                 <div className="p-4 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-3">
                   <AlertCircle size={20} className="text-academic-blue shrink-0 mt-0.5" />
                   <div className="text-sm text-slate-600">
@@ -972,13 +971,13 @@ export function AdminPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">{t('title')}</label>
+                    <label className="text-sm font-bold text-slate-600 uppercase tracking-wider field-required">{t('title')}</label>
                     <input 
                       required
                       type="text"
                       placeholder="e.g. RRB NTPC Recruitment 2024"
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all"
-                      value={form.title}
+                      value={form.title || ''}
                       onChange={e => setForm({...form, title: e.target.value})}
                     />
                   </div>
@@ -1089,7 +1088,7 @@ export function AdminPage() {
                     <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">{t('type')}</label>
                     <select 
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all bg-white"
-                      value={form.type}
+                      value={form.type || 'job'}
                       onChange={e => setForm({...form, type: e.target.value as any})}
                     >
                       <option value="job">{t('jobs')}</option>
@@ -1100,11 +1099,11 @@ export function AdminPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">{t('category')}</label>
+                    <label className="text-sm font-bold text-slate-600 uppercase tracking-wider field-required">{t('category')}</label>
                     <select 
                       required
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all bg-white"
-                      value={form.category}
+                      value={form.category || ''}
                       onChange={e => setForm({...form, category: e.target.value})}
                     >
                       <option value="">{t('selectCategory')}</option>
@@ -1127,7 +1126,7 @@ export function AdminPage() {
                       type="text"
                       placeholder="e.g. All India, Bihar"
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all"
-                      value={form.state}
+                      value={form.state || ''}
                       onChange={e => setForm({...form, state: e.target.value})}
                     />
                     <p className="text-[10px] text-slate-400 italic">{t('stateSelectionNotice')}</p>
@@ -1140,7 +1139,7 @@ export function AdminPage() {
                       type="text"
                       placeholder="e.g. Railway Recruitment Board"
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all"
-                      value={form.organization}
+                      value={form.organization || ''}
                       onChange={e => setForm({...form, organization: e.target.value})}
                     />
                   </div>
@@ -1164,7 +1163,7 @@ export function AdminPage() {
                     rows={4}
                     placeholder="Full details about the update..."
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all resize-none"
-                    value={form.description}
+                    value={form.description || ''}
                     onChange={e => setForm({...form, description: e.target.value})}
                   />
                 </div>
@@ -1861,7 +1860,7 @@ export function AdminPage() {
                 {editingSocialId ? t('editSocialLink') : t('addNewSocialLink')}
               </h2>
               
-              <form onSubmit={handleSocialSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <form id="admin-social-form" onSubmit={handleSocialSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">{t('platform')}</label>
                   <select 
@@ -1880,7 +1879,7 @@ export function AdminPage() {
                 </div>
                 
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">{t('displayName')}</label>
+                  <label className="text-sm font-bold text-slate-600 uppercase tracking-wider field-required">{t('displayName')}</label>
                   <input 
                     required
                     type="text"
@@ -1892,7 +1891,7 @@ export function AdminPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">{t('url')}</label>
+                  <label className="text-sm font-bold text-slate-600 uppercase tracking-wider field-required">{t('url')}</label>
                   <input 
                     required
                     type="url"
@@ -1990,6 +1989,10 @@ export function AdminPage() {
 
         {activeTab === 'adsense' && (
           <AdSenseAnalytics accountId="ca-pub-6710575017251149" />
+        )}
+
+        {activeTab === 'settings' && (
+          <SystemSettingsManager />
         )}
       </main>
 

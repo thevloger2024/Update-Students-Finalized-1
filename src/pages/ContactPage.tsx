@@ -8,6 +8,7 @@ import { collection, onSnapshot, query, orderBy, addDoc } from 'firebase/firesto
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { toast } from 'sonner';
 import { useSiteSettings } from '../hooks/useSiteSettings';
+import { validateForm } from '../utils/validation';
 
 interface SocialLink {
   id: string;
@@ -41,11 +42,8 @@ export function ContactPage() {
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) {
-      toast.error("Please fill in all required fields.");
-      return;
-    }
-
+    if (!validateForm('contact-form')) return;
+    
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, 'contact_messages'), {
@@ -157,10 +155,10 @@ export function ContactPage() {
 
               <div className="p-12">
                 <h2 className="text-2xl font-serif font-bold text-academic-blue mb-8">Send us a Message</h2>
-                <form className="space-y-6" onSubmit={handleContactSubmit}>
+                <form id="contact-form" className="space-y-6" onSubmit={handleContactSubmit}>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700">Full Name</label>
+                      <label className="text-sm font-bold text-slate-700 field-required">Full Name</label>
                       <input 
                         type="text" 
                         placeholder="John Doe"
@@ -171,7 +169,7 @@ export function ContactPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700">Email Address</label>
+                      <label className="text-sm font-bold text-slate-700 field-required">Email Address</label>
                       <input 
                         type="email" 
                         placeholder="john@example.com"
@@ -193,7 +191,7 @@ export function ContactPage() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Message</label>
+                    <label className="text-sm font-bold text-slate-700 field-required">Message</label>
                     <textarea 
                       rows={5}
                       placeholder="Your message here..."

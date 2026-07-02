@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { db } from '../firebase';
 import { doc, getDoc, collection, addDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { validateForm } from '../utils/validation';
 
 interface DeveloperProfile {
   name: string;
@@ -70,8 +71,8 @@ export function DeveloperPage() {
 
   const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!contactForm.name || !contactForm.email || !contactForm.message) {
-      toast.error("Please fill in all required fields.");
+    if (!validateForm('developer-contact-form')) {
+      toast.error('⚠️ Please fill in all required fields before submitting.');
       return;
     }
 
@@ -185,10 +186,10 @@ export function DeveloperPage() {
                     <p className="text-slate-500">Have a question or want to collaborate? Send me a message!</p>
                   </div>
 
-                  <form onSubmit={handleContactSubmit} className="space-y-6">
+                  <form id="developer-contact-form" onSubmit={handleContactSubmit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2 field-required">
                           <User size={14} />
                           Full Name
                         </label>
@@ -202,7 +203,7 @@ export function DeveloperPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2 field-required">
                           <Mail size={14} />
                           Email Address
                         </label>
@@ -232,7 +233,7 @@ export function DeveloperPage() {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2 field-required">
                         <MessageCircle size={14} />
                         Message
                       </label>

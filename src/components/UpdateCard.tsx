@@ -104,7 +104,7 @@ export const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
     e.preventDefault();
     e.stopPropagation();
     const url = `${window.location.origin}/update/${update.id}`;
-    const txt = `🎯 ${update.title} | Last Date: ${update.endDate ? formatDate(update.endDate, t('language') as any || 'en') : 'Not Specified'} | Apply: ${url} via UpdateStudents`;
+    const txt = `🎯 ${update.title} | Last Date: ${update.endDate ? formatDate(update.endDate) : 'Not Specified'} | Apply: ${url} via UpdateStudents`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`, '_blank');
   };
 

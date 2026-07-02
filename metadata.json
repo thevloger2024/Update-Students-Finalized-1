@@ -1,5 +1,6 @@
 {
-  "name": "Update Students ",
-  "description": "Update Students Project 1 is ready ",
-  "requestFramePermissions": []
+  "name": "Update Students",
+  "description": "A comprehensive portal for students featuring educational updates, jobs, results, and AI-powered translations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

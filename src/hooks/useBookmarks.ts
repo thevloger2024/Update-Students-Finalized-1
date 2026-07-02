@@ -59,7 +59,11 @@ export function useBookmarks() {
       setBookmarks(newBookmarks);
 
       // Save to localStorage
-      localStorage.setItem('user_bookmarks', JSON.stringify(updated));
+      try {
+        localStorage.setItem('user_bookmarks', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Failed to save bookmarks', err);
+      }
 
       return updated;
     });

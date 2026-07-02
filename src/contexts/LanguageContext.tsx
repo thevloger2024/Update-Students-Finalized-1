@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { GoogleGenAI } from "@google/genai";
 
 export type Language = 
   | 'en' | 'hi' | 'bn' | 'te' | 'mr' | 'ta' | 'ur' | 'gu' | 'kn' | 'ml' 
@@ -776,28 +775,35 @@ const initialTranslations: Record<string, Record<string, string>> = {
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
-
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguageState] = useState<Language>(() => {
-    const saved = localStorage.getItem('preferredLanguage');
-    return (saved as Language) || 'en';
+    try {
+      const saved = localStorage.getItem('preferredLanguage');
+      return (saved as Language) || 'en';
+    } catch (e) {
+      console.warn('localStorage error', e);
+      return 'en';
+    }
   });
 
   const [translations, setTranslations] = useState<Record<string, Record<string, string>>>(() => {
-    const saved = localStorage.getItem('cachedTranslations');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Merge with initial to ensure new keys are present
-        const merged = { ...initialTranslations };
-        Object.keys(parsed).forEach(lang => {
-          merged[lang] = { ...merged[lang], ...parsed[lang] };
-        });
-        return merged;
-      } catch (e) {
-        return initialTranslations;
+    try {
+      const saved = localStorage.getItem('cachedTranslations');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          // Merge with initial to ensure new keys are present
+          const merged = { ...initialTranslations };
+          Object.keys(parsed).forEach(lang => {
+            merged[lang] = { ...merged[lang], ...parsed[lang] };
+          });
+          return merged;
+        } catch (e) {
+          return initialTranslations;
+        }
       }
+    } catch (e) {
+      console.warn('localStorage error', e);
     }
     return initialTranslations;
   });
@@ -806,7 +812,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang);
-    localStorage.setItem('preferredLanguage', lang);
+    try {
+      localStorage.setItem('preferredLanguage', lang);
+    } catch (e) {
+      console.warn('localStorage error', e);
+    }
   };
 
   // Function to translate a single text
@@ -815,16 +825,26 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     // Check cache first
     const cacheKey = `dyn_${language}_${text}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) return cached;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) return cached;
+    } catch (e) {
+      console.warn('localStorage error', e);
+    }
 
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Translate the following text to ${language}. Return ONLY the translated text, nothing else. Text: "${text}"`,
+      const response = await fetch('/api/gemini/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, targetLanguage: language })
       });
-      const translated = response.text.trim().replace(/^"|"$/g, '') || text;
-      localStorage.setItem(cacheKey, translated);
+      const data = await response.json();
+      const translated = data.text || text;
+      try {
+        localStorage.setItem(cacheKey, translated);
+      } catch (e) {
+        console.warn('localStorage error', e);
+      }
       return translated;
     } catch (error) {
       console.error("Dynamic translation error:", error);
@@ -856,18 +876,22 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         ${JSON.stringify(batch.reduce((acc, key) => ({ ...acc, [key]: translations.en[key] }), {}), null, 2)}`;
 
         try {
-          const response = await ai.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: prompt,
-            config: { responseMimeType: "application/json" }
+          const response = await fetch('/api/gemini/generate-json', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt })
           });
           
-          const result = JSON.parse(response.text);
+          const result = await response.json();
           Object.assign(newTranslations[language], result);
           
           // Update state incrementally for better UX
           setTranslations({ ...newTranslations });
-          localStorage.setItem('cachedTranslations', JSON.stringify(newTranslations));
+          try {
+            localStorage.setItem('cachedTranslations', JSON.stringify(newTranslations));
+          } catch (e) {
+            console.warn('localStorage error', e);
+          }
         } catch (error) {
           console.error("Batch translation error:", error);
           break; // Stop if error to avoid infinite loops
@@ -915,13 +939,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           Terms: ${JSON.stringify(batch)}`;
 
           try {
-            const response = await ai.models.generateContent({
-              model: "gemini-3-flash-preview",
-              contents: prompt,
-              config: { responseMimeType: "application/json" }
+            const response = await fetch('/api/gemini/generate-json', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt })
             });
             
-            const result = JSON.parse(response.text);
+            const result = await response.json();
             Object.assign(results, result);
           } catch (error) {
             console.error("Proactive batch translation error:", error);
@@ -936,7 +960,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             const next = { ...prev };
             if (!next[language]) next[language] = {};
             next[language] = { ...next[language], ...results };
-            localStorage.setItem('cachedTranslations', JSON.stringify(next));
+            try {
+              localStorage.setItem('cachedTranslations', JSON.stringify(next));
+            } catch (err) {
+              console.warn('localStorage error', err);
+            }
             return next;
           });
         }

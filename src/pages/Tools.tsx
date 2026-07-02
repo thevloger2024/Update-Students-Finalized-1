@@ -187,7 +187,7 @@ function ImageTool({ type }: { type: 'image' | 'signature' }) {
       const options = {
         maxSizeMB: targetSize / 1024,
         maxWidthOrHeight: 1920,
-        useWebWorker: true
+        useWebWorker: false
       };
       
       const compressedFile = await imageCompression(
@@ -419,7 +419,7 @@ function ImageToPdfTool() {
         const compressedFile = await imageCompression(file, {
           maxSizeMB: 1,
           maxWidthOrHeight: 1920,
-          useWebWorker: true
+          useWebWorker: false
         });
 
         const imgData = await new Promise<string>((resolve) => {

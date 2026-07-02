@@ -3,7 +3,7 @@ import { Header } from '../components/Header';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, setDoc, collection, query, onSnapshot, limit, updateDoc, getDocs, deleteDoc, orderBy } from 'firebase/firestore';
-import { GoogleGenAI, Type } from '@google/genai';
+// import removed
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle, Linkedin, Mail, CheckCircle2, Clock, ExternalLink, UserCheck, UserMinus, ShieldAlert, Send, MessageSquare, User as UserIcon } from 'lucide-react';
@@ -12,6 +12,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from '../components/TranslatedText';
 import { signInWithGoogle, logOut } from '../firebase';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
+import { SystemSettingsManager } from '../components/SystemSettingsManager';
 
 const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
@@ -764,48 +765,20 @@ function AdminQuizManager({ onDelete }: { onDelete: (id: string, type: 'message'
       });
 
       const mimeType = file.type;
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
       
-      const prompt = `Extract up to 90 multiple-choice questions (or all available if less) from this document for the ${orgName} from year ${year}. 
-                     Return a JSON array of objects. Each object must have: 
-                     'question' (string), 
-                     'options' (array of exactly 4 strings), 
-                     'correctIndex' (number from 0 to 3 indicating the correct option),
-                     'explanation' (optional string explaining the answer).
-                     Ensure the output is valid JSON and strictly follows the schema.`;
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: [{
-          parts: [
-            { inlineData: { data: base64Data, mimeType } },
-            { text: prompt }
-          ]
-        }],
-        config: { 
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                question: { type: Type.STRING },
-                options: { 
-                  type: Type.ARRAY,
-                  items: { type: Type.STRING },
-                  minItems: 4,
-                  maxItems: 4
-                },
-                correctIndex: { type: Type.INTEGER },
-                explanation: { type: Type.STRING }
-              },
-              required: ['question', 'options', 'correctIndex']
-            }
-          }
-        }
+      const response = await fetch('/api/gemini/extract-questions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64Data, mimeType, orgName, year })
       });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to extract');
+      }
 
-      const questions = JSON.parse(response.text || "[]");
+      const questions = Array.isArray(result) ? result : [];
       
       if (!Array.isArray(questions) || questions.length === 0) {
         throw new Error("Invalid questions format returned from AI.");
@@ -1274,141 +1247,6 @@ function UserManager() {
             )}
           </tbody>
         </table>
-      </div>
-    </motion.div>
-  );
-}
-
-function SystemSettingsManager() {
-  const { t } = useLanguage();
-  const [settings, setSettings] = useState({
-    siteName: 'Update Students',
-    maintenanceMode: false,
-    contactEmail: 'support@updatestudents.com',
-    allowRegistration: true,
-    telegramLink: 'https://t.me/updatestudents'
-  });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const docRef = doc(db, 'site_settings', 'general');
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          setSettings(docSnap.data() as any);
-        }
-      } catch (error) {
-        console.error("Error fetching settings:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSettings();
-  }, []);
-
-  const handleSave = async () => {
-    setSaving(true);
-    try {
-      await setDoc(doc(db, 'site_settings', 'general'), settings);
-      toast.success("Settings saved successfully");
-    } catch (error) {
-      toast.error("Failed to save settings");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return <div className="py-12 text-center text-slate-500">Loading settings...</div>;
-  }
-
-  return (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 md:p-8"
-    >
-      <div className="flex items-center gap-4 mb-8">
-        <div className="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600">
-          <Settings size={24} />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">{t('systemSettings')}</h2>
-          <p className="text-slate-500">{t('systemSettingsDesc')}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700">Site Name</label>
-            <input 
-              type="text" 
-              value={settings.siteName || ''}
-              onChange={(e) => setSettings({...settings, siteName: e.target.value})}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700">Contact Email</label>
-            <input 
-              type="email" 
-              value={settings.contactEmail || ''}
-              onChange={(e) => setSettings({...settings, contactEmail: e.target.value})}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-slate-700">Telegram Link</label>
-            <input 
-              type="url" 
-              value={settings.telegramLink || ''}
-              onChange={(e) => setSettings({...settings, telegramLink: e.target.value})}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-academic-blue outline-none transition-all"
-              placeholder="https://t.me/yourchannel"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-6">
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-            <div>
-              <p className="font-bold text-slate-800">Maintenance Mode</p>
-              <p className="text-xs text-slate-500">Disable the site for public users</p>
-            </div>
-            <button 
-              onClick={() => setSettings({...settings, maintenanceMode: !settings.maintenanceMode})}
-              className={`w-12 h-6 rounded-full transition-colors relative ${settings.maintenanceMode ? 'bg-orange-500' : 'bg-slate-300'}`}
-            >
-              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.maintenanceMode ? 'left-7' : 'left-1'}`} />
-            </button>
-          </div>
-
-          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-            <div>
-              <p className="font-bold text-slate-800">Allow Registration</p>
-              <p className="text-xs text-slate-500">Enable new user signups</p>
-            </div>
-            <button 
-              onClick={() => setSettings({...settings, allowRegistration: !settings.allowRegistration})}
-              className={`w-12 h-6 rounded-full transition-colors relative ${settings.allowRegistration ? 'bg-green-500' : 'bg-slate-300'}`}
-            >
-              <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.allowRegistration ? 'left-7' : 'left-1'}`} />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="px-8 py-3 bg-academic-blue text-white font-bold rounded-xl hover:bg-blue-800 transition-all disabled:opacity-50 flex items-center gap-2"
-        >
-          {saving ? 'Saving...' : 'Save Settings'}
-        </button>
       </div>
     </motion.div>
   );

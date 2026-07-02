@@ -1,17 +1,21 @@
-import { GoogleGenAI } from "@google/genai";
-
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || '' });
+// Removed GoogleGenAI import because translation is now done on the backend.
 
 export async function translateText(text: string, targetLanguage: string): Promise<string> {
   if (!text || !targetLanguage || targetLanguage === 'en') return text;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: `Translate the following text to ${targetLanguage}. Return ONLY the translated text, nothing else. Text: "${text}"`,
+    const response = await fetch('/api/gemini/translate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, targetLanguage })
     });
-
-    return response.text.trim().replace(/^"|"$/g, '') || text;
+    
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to translate');
+    }
+    
+    return data.text || text;
   } catch (error) {
     console.error("Translation error:", error);
     return text;

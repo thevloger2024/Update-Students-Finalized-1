@@ -1,5 +1,4 @@
 import { useState, useCallback } from 'react';
-import { GoogleGenAI, Type } from "@google/genai";
 import { Language } from '../contexts/LanguageContext';
 
 // Persistent cache to avoid redundant API calls across sessions
@@ -63,29 +62,22 @@ const processQueue = async () => {
     byLang[req.targetLang].push(req);
   });
 
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-
   for (const lang of Object.keys(byLang) as Language[]) {
     const requests = byLang[lang];
     const uniqueTexts = Array.from(new Set(requests.map(r => r.text)));
     
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `Translate the following array of strings to ${langNames[lang] || 'English'}. 
+      const prompt = `Translate the following array of strings to ${langNames[lang] || 'English'}. 
                    Maintain technical terms (like SSC, UPSC, RRB, ARMY, NAVY, AGNEEVEER, NEET, JEE).
-                   Strings: ${JSON.stringify(uniqueTexts)}`,
-        config: { 
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING }
-          },
-          systemInstruction: "You are a professional translator for a government job notification website. Return a JSON array of translated strings in the exact same order as the input. Do not translate the website name 'Job Update' if it appears."
-        }
+                   Strings: ${JSON.stringify(uniqueTexts)}`;
+                   
+      const response = await fetch('/api/gemini/generate-json', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
       });
       
-      const translatedArray = JSON.parse(response.text || "[]");
+      const translatedArray = await response.json();
       const resultMap: Record<string, string> = {};
       
       if (Array.isArray(translatedArray)) {
