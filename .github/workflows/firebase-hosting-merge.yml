@@ -49,5 +49,5 @@ jobs:
           ${{ secrets.FIREBASE_SERVICE_ACCOUNT_GEN_LANG_CLIENT_0720728369 }}
           EOF
           export GOOGLE_APPLICATION_CREDENTIALS=service-account.json
-          npx firebase-tools deploy --only firestore:rules --project gen-lang-client-0720728369
+          npx --yes firebase-tools deploy --only firestore:rules --project gen-lang-client-0720728369
           rm -f service-account.json
