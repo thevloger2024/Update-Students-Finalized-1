@@ -45,7 +45,9 @@ jobs:
 
       - name: Deploy Firestore Rules
         run: |
-          echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_GEN_LANG_CLIENT_0720728369 }}' > service-account.json
+          cat << 'EOF' > service-account.json
+          ${{ secrets.FIREBASE_SERVICE_ACCOUNT_GEN_LANG_CLIENT_0720728369 }}
+          EOF
           export GOOGLE_APPLICATION_CREDENTIALS=service-account.json
           npx firebase-tools deploy --only firestore:rules --project gen-lang-client-0720728369
-          rm service-account.json
+          rm -f service-account.json

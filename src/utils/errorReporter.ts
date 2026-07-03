@@ -1,3 +1,6 @@
+import { db } from '../firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
 /**
  * Client-side Error Reporter
  * Automatically captures JS errors and sends them to the server
@@ -50,9 +53,6 @@ export async function reportError(error: ErrorReport): Promise<void> {
     if (error.url && !error.url.includes(window.location.hostname) && !error.url.includes('localhost')) {
       return;
     }
-
-    const { db } = await import('../firebase');
-    const { collection, addDoc, serverTimestamp } = await import('firebase/firestore');
 
     await addDoc(collection(db, 'client_errors'), {
       ...error,

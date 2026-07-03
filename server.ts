@@ -911,7 +911,7 @@ Analyze deeply and return JSON:
     console.log(`✅ Aspect-Ratio Thumbnails: ENABLED`);
     console.log(`✅ Admin AI Chatbot: ENABLED`);
     console.log(`✅ Autonomous Intelligence: ENABLED`);
-    console.log(`✅ Error Monitoring: ENABLED`);
+    console.log(`✅ Health & Diagnostics: ENABLED`);
     console.log(`✅ Response Cache: ENABLED (1hr TTL)\n`);
   });
 }
