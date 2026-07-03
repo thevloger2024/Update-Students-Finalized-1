@@ -239,5 +239,26 @@ service cloud.firestore {
       allow create: if true;
       allow read, update, delete: if isAdmin();
     }
+
+    // AI Intelligence Features
+    match /intelligence_settings/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /intelligence_sources/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /intelligence_activity/{docId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+
+    match /client_errors/{docId} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
   }
 }
