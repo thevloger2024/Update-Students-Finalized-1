@@ -43,15 +43,17 @@ jobs:
           channelId: live
           projectId: gen-lang-client-0720728369
 
-      - name: Deploy Firestore Rules
-        continue-on-error: true
-        run: |
-          echo "==== Deploying Firestore Rules ===="
-          echo "If this step fails, please make sure your GitHub secret's Service Account"
-          echo "has the 'Firebase Rules Admin' and 'Cloud Datastore Owner' roles in Google Cloud IAM."
-          cat << 'EOF' > service-account.json
-          ${{ secrets.FIREBASE_SERVICE_ACCOUNT_GEN_LANG_CLIENT_0720728369 }}
-          EOF
-          export GOOGLE_APPLICATION_CREDENTIALS=service-account.json
-          npx firebase-tools deploy --only firestore:rules --project gen-lang-client-0720728369
-          rm -f service-account.json
+      # Firestore deployment disabled - permission issue with service account
+      # Uncomment when service account has proper IAM roles
+      # - name: Deploy Firestore Rules
+      #   continue-on-error: true
+      #   run: |
+      #     echo "==== Deploying Firestore Rules ===="
+      #     echo "If this step fails, please make sure your GitHub secret's Service Account"
+      #     echo "has the 'Firebase Rules Admin' and 'Cloud Datastore Owner' roles in Google Cloud IAM."
+      #     cat << 'EOF' > service-account.json
+      #     ${{ secrets.FIREBASE_SERVICE_ACCOUNT_GEN_LANG_CLIENT_0720728369 }}
+      #     EOF
+      #     export GOOGLE_APPLICATION_CREDENTIALS=service-account.json
+      #     npx firebase-tools deploy --only firestore:rules --project gen-lang-client-0720728369
+      #     rm -f service-account.json
