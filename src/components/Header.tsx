@@ -7,6 +7,7 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { FeedbackModal } from './FeedbackModal';
 import { useLanguage, Language } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 import { TranslatedText } from './TranslatedText';
 import { cn } from '../contexts/utils';
 import { toast } from 'sonner';
@@ -32,6 +33,8 @@ export function Header() {
   
   const { language, setLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
+  const { settings } = useSiteSettings();
+  const siteName = settings.siteName;
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -141,7 +144,7 @@ export function Header() {
           <Link to="/" className="flex items-center gap-2 text-academic-blue shrink-0">
             <GraduationCap size={32} strokeWidth={1.5} />
             <span className="font-serif text-2xl md:text-3xl font-bold tracking-tight">
-              Update Students
+              {siteName}
             </span>
           </Link>
 

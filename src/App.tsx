@@ -9,6 +9,7 @@ import { BrowserRouter as Router, useLocation, useRoutes } from 'react-router-do
 import { BookmarkProvider } from './contexts/BookmarkContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
+
 import { Toaster } from 'sonner';
 import { ScrollToTop } from './components/ScrollToTop';
 import { MobileBottomNav } from './components/MobileBottomNav';

@@ -1,5 +1,6 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async';
+import { useSiteSettings } from '../hooks/useSiteSettings';
 
 interface SEOProps {
   title: string;
@@ -23,12 +24,14 @@ interface SEOProps {
 }
 
 export function SEO({ title, description, keywords, url, jobPosting }: SEOProps) {
+  const { settings } = useSiteSettings();
+  const siteName = settings.siteName;
   const siteUrl = window.location.origin;
   const currentUrl = url || `${siteUrl}${window.location.pathname}`;
 
   return (
     <Helmet>
-      <title>{title} | Update Students</title>
+      <title>{title} | {siteName}</title>
       <meta name="description" content={description} />
       {keywords && <meta name="keywords" content={keywords} />}
       <meta property="og:title" content={title} />
