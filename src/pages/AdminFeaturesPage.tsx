@@ -1,3 +1,5 @@
+import { AdminGuidesManager } from '../components/AdminGuidesManager';
+import { AdminJobDataManager } from '../components/AdminJobDataManager';
 import React, { useState, useEffect, useRef } from 'react';
 import { Header } from '../components/Header';
 import { auth, db, handleFirestoreError, OperationType } from '../firebase';
@@ -6,7 +8,7 @@ import { doc, getDoc, setDoc, collection, query, onSnapshot, limit, updateDoc, g
 // import removed
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle, Linkedin, Mail, CheckCircle2, Clock, ExternalLink, UserCheck, UserMinus, ShieldAlert, Send, MessageSquare, User as UserIcon, Brain } from 'lucide-react';
+import { Lock, LogIn, LogOut, Shield, Settings, Users, Database, ArrowLeft, UserCircle, Upload, Save, BrainCircuit, Trash2, MessageCircle, Linkedin, Mail, CheckCircle2, Clock, ExternalLink, UserCheck, UserMinus, ShieldAlert, Send, MessageSquare, User as UserIcon, Brain , BookOpen, Briefcase } from 'lucide-react';
 import { toast } from 'sonner';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from '../components/TranslatedText';
@@ -145,6 +147,22 @@ export function AdminFeaturesPage() {
 
   const features = [
     {
+      id: 'jobdata',
+      title: 'Job Data Manager',
+      description: 'Manage dynamic jobs list for the job guide view.',
+      icon: Briefcase,
+      color: "bg-indigo-50 text-indigo-600",
+      status: "Active"
+    },
+    {
+      id: 'guides',
+      title: 'Job Guides & Tips',
+      description: 'Manage static articles, PDF guides, and study tips.',
+      icon: BookOpen,
+      color: "bg-blue-50 text-blue-600",
+      status: "Active"
+    },
+    {
       id: 'users',
       title: t('userManagement'),
       description: t('userManagementDesc'),
@@ -253,6 +271,10 @@ export function AdminFeaturesPage() {
           <FeedbackManager onDelete={handleDeleteRequest} />
         ) : activeFeature === 'users' ? (
           <UserManager />
+        ) : activeFeature === 'jobdata' ? (
+          <AdminJobDataManager />
+        ) : activeFeature === 'guides' ? (
+          <AdminGuidesManager />
         ) : activeFeature === 'system' ? (
           <SystemSettingsManager />
         ) : activeFeature === 'intelligence' ? (

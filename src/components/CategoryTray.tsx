@@ -4,7 +4,7 @@ import { cn } from '../contexts/utils';
 import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from './TranslatedText';
 import { useNavigate } from 'react-router-dom';
-import { BrainCircuit } from 'lucide-react';
+import { BrainCircuit, BookOpen } from 'lucide-react';
 
 const CATEGORIES = [
   "RRB", "SSC", "UPSC", "BPSC", "POLICE", "ARMY", "NAVI", "AGNEEVEER", "SSB", "NEET", "JEE"

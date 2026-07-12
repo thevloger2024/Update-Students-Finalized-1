@@ -7,6 +7,13 @@ import { BookOpen, FileText } from 'lucide-react';
 export function TipsPage() {
   const articles = [
     {
+      id: '10th-pass-direct-recruitment',
+      title: '10th Pass Jobs: Direct Recruitment & Interview Only Jobs (All-India & Bihar)',
+      excerpt: 'Bina pariksha, merit ke aadhar par aur sirf interview se select hone wali sabhi 10th pass bhartiyon ki detailed list. PDF download ke sath.',
+      date: '2026-07-10',
+      category: 'Job Guide'
+    },
+    {
       id: 'ssc-cgl-2026-guide',
       title: 'SSC CGL 2026 Complete Guide: Preparation Strategy and Books',
       excerpt: 'Read the complete guide to crack SSC CGL 2026 in your first attempt. Detailed syllabus, books and time table strategies.',

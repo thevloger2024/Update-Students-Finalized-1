@@ -34,6 +34,7 @@ const QuizResultPage = lazy(() => import('./pages/QuizResultPage').then(module =
 const QuizHistoryPage = lazy(() => import('./pages/QuizHistoryPage').then(module => ({ default: module.default })));
 const ExamCalendar = lazy(() => import('./pages/ExamCalendar').then(module => ({ default: module.ExamCalendar })));
 const TipsPage = lazy(() => import('./pages/TipsPage').then(module => ({ default: module.TipsPage })));
+const TipDetailPage = lazy(() => import('./pages/TipDetailPage').then(module => ({ default: module.TipDetailPage })));
 
 const LoadingFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -49,7 +50,7 @@ function AnimatedRoutes() {
     { path: "/update/:id", element: <PageTransition><DetailPage /></PageTransition> },
     { path: "/exam-calendar", element: <PageTransition><ExamCalendar /></PageTransition> },
     { path: "/tips", element: <PageTransition><TipsPage /></PageTransition> },
-    { path: "/tips/:id", element: <PageTransition><TipsPage /></PageTransition> }, // Re-route to list for now
+    { path: "/tips/:id", element: <PageTransition><TipDetailPage /></PageTransition> },
     { path: "/saved", element: <PageTransition><SavedPage /></PageTransition> },
     { path: "/notifications", element: <PageTransition><NotificationSettingsPage /></PageTransition> },
     { path: "/admin", element: <PageTransition><AdminPage /></PageTransition> },
