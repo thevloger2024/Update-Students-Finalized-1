@@ -4,8 +4,8 @@ import { Header } from '../components/Header';
 import { UpdateData, ApplicationFee, PostVacancy } from '../components/UpdateCard';
 import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ArrowLeft, Calendar, Building2, Users, MapPin, Bookmark, Share2, ImageIcon, CheckCircle, AlertCircle, HelpCircle, Languages, Plus, FileText } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Calendar, Building2, Users, MapPin, Bookmark, Share2, ImageIcon, CheckCircle, AlertCircle, HelpCircle, Languages, Plus, FileText, Download } from 'lucide-react';
+import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 import { useBookmarkContext } from '../contexts/BookmarkContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { toast } from 'sonner';
@@ -14,7 +14,14 @@ import { cn, formatDate } from '../contexts/utils';
 import { TranslatedText } from '../components/TranslatedText';
 
 export function DetailPage() {
+
   const { id } = useParams<{ id: string }>();
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
   const { t, language } = useLanguage();
   const { translateContent, isTranslating } = useTranslationService();
   const [update, setUpdate] = useState<UpdateData | null>(null);
@@ -34,6 +41,63 @@ export function DetailPage() {
   const [loading, setLoading] = useState(true);
   const { bookmarks, toggleBookmark, isAuthenticated } = useBookmarkContext();
   const isBookmarked = id ? bookmarks[id] : false;
+
+
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleDownloadPdf = async () => {
+    if (!update) return;
+    
+    setIsGeneratingPdf(true);
+    const toastId = toast.loading('Generating PDF...');
+    
+    try {
+      const element = document.getElementById('post-content-area');
+      if (!element) throw new Error('Content not found');
+      
+      const html2canvas = (await import('html2canvas')).default;
+      const { jsPDF } = await import('jspdf');
+      
+      const canvas = await html2canvas(element, {
+        scale: 2, // Higher resolution
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff'
+      });
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      
+      let heightLeft = pdfHeight;
+      let position = 0;
+      
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+      heightLeft -= pdf.internal.pageSize.getHeight();
+      
+      while (heightLeft >= 0) {
+        position = heightLeft - pdfHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+        heightLeft -= pdf.internal.pageSize.getHeight();
+      }
+      
+      pdf.save(`${update.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pdf`);
+      
+      toast.success('PDF downloaded successfully!', { id: toastId });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast.error('Failed to generate PDF', { id: toastId });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   const handleShare = async () => {
     if (!update) return;
@@ -190,6 +254,10 @@ export function DetailPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
+      <motion.div
+        className="fixed top-0 left-0 right-0 h-1.5 bg-academic-gold origin-left z-[100]"
+        style={{ scaleX }}
+      />
       <Header />
       
       <main className="max-w-4xl mx-auto px-4 py-8 pb-20">
@@ -201,6 +269,7 @@ export function DetailPage() {
         <motion.article 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
+          id="post-content-area"
           className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
         >
           {update.thumbnail && (
@@ -253,6 +322,16 @@ export function DetailPage() {
                     <span className="font-semibold">{isBookmarked ? t('saved') : t('save')}</span>
                   </button>
                 )}
+
+                <button
+                  onClick={handleDownloadPdf}
+                  disabled={isGeneratingPdf}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white text-slate-600 hover:border-academic-blue hover:text-academic-blue transition-all duration-200 shadow-sm shrink-0 disabled:opacity-50"
+                  title="Download as PDF"
+                >
+                  <Download size={20} />
+                  <span className="font-semibold">{isGeneratingPdf ? '...' : 'PDF'}</span>
+                </button>
                 <button
                   onClick={handleShare}
                   className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white text-slate-600 hover:border-academic-blue hover:text-academic-blue transition-all duration-200 shadow-sm shrink-0"
