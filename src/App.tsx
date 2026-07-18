@@ -75,6 +75,7 @@ function AnimatedRoutes() {
   );
 }
 
+import { OfflineBanner } from './components/OfflineBanner';
 import { MaintenanceGuard } from './components/MaintenanceGuard';
 
 export default function App() {

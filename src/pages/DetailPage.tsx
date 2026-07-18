@@ -4,7 +4,7 @@ import { Header } from '../components/Header';
 import { UpdateData, ApplicationFee, PostVacancy } from '../components/UpdateCard';
 import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../firebase';
-import { ArrowLeft, Calendar, Building2, Users, MapPin, Bookmark, Share2, ImageIcon, CheckCircle, AlertCircle, HelpCircle, Languages, Plus, FileText, Download } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, Users, MapPin, Bookmark, Share2, Copy, ImageIcon, CheckCircle, AlertCircle, HelpCircle, Languages, Plus, FileText, Download } from 'lucide-react';
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion';
 import { useBookmarkContext } from '../contexts/BookmarkContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -96,6 +96,16 @@ export function DetailPage() {
       toast.error('Failed to generate PDF', { id: toastId });
     } finally {
       setIsGeneratingPdf(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success(t('linkCopied') || 'Link copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy link:', err);
+      toast.error('Failed to copy link');
     }
   };
 
@@ -339,6 +349,14 @@ export function DetailPage() {
                 >
                   <Share2 size={20} />
                   <span className="font-semibold">{t('share')}</span>
+                </button>
+                <button
+                  onClick={handleCopyLink}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-200 bg-white text-slate-600 hover:border-academic-blue hover:text-academic-blue transition-all duration-200 shadow-sm shrink-0"
+                  title="Copy Link"
+                >
+                  <Copy size={20} />
+                  <span className="font-semibold">Copy Link</span>
                 </button>
               </div>
             </div>
