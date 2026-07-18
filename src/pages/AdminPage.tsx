@@ -16,6 +16,7 @@ import { TranslatedText } from '../components/TranslatedText';
 import { AdSenseAnalytics } from '../components/AdSenseAnalytics';
 import { useAdminNotifications } from '../hooks/useAdminNotifications';
 import { SystemSettingsManager } from '../components/SystemSettingsManager';
+import { AdminUIThemeManager } from '../components/AdminUIThemeManager';
 import { validateForm } from '../utils/validation';
 import { AdminAIChatbot } from '../components/AdminAIChatbot';
 import { ImageAnalyzer } from '../components/ImageAnalyzer';
@@ -43,6 +44,7 @@ interface UpdateForm {
   applicationFees: ApplicationFee[];
   postVacancies: PostVacancy[];
   featured: boolean;
+  tags?: string[];
   thumbnail?: string;
   steps?: {
     text: string;
@@ -71,6 +73,7 @@ const INITIAL_FORM: UpdateForm = {
   applicationFees: [],
   postVacancies: [],
   featured: false,
+  tags: [],
   thumbnail: '',
   steps: [],
 };
@@ -139,7 +142,7 @@ export function AdminPage() {
     }
   }, [editingId]);
   const [showPreview, setShowPreview] = useState(false);
-  const [activeTab, setActiveTab] = useState<'updates' | 'social' | 'adsense' | 'settings'>('updates');
+  const [activeTab, setActiveTab] = useState<'updates' | 'social' | 'adsense' | 'settings' | 'ui'>('updates');
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>([]);
   const [socialForm, setSocialForm] = useState<Omit<SocialLink, 'id'>>({
     platform: 'WhatsApp',
@@ -381,6 +384,7 @@ export function AdminPage() {
         applicationFees: (form.applicationFees || []).filter(fee => fee.category.trim() !== '' || fee.fee.trim() !== ''),
         postVacancies: (form.postVacancies || []).filter(v => v.postName.trim() !== '' || v.count.trim() !== ''),
         steps: (form.steps || []).filter(step => step.text.trim() !== ''),
+        tags: (form.tags || []).filter(tag => tag.trim() !== ''),
         updatedAt: Date.now(),
         // Ensure type is explicitly set from form
         type: form.type || 'job',
@@ -491,6 +495,55 @@ export function AdminPage() {
       };
       reader.onerror = (err) => reject(err);
     });
+  };
+
+  const [isSuggestingTags, setIsSuggestingTags] = useState(false);
+
+  const handleAiSuggestTags = async () => {
+    if (!form.description || form.description.trim().length < 20) {
+      toast.error('Please enter a longer description first.');
+      return;
+    }
+    
+    setIsSuggestingTags(true);
+    const toastId = toast.loading('Analyzing description to suggest category and tags...');
+    
+    try {
+      const response = await fetch('/api/gemini/suggest-tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ description: form.description })
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch suggestions');
+      }
+      
+      const data = await response.json();
+      
+      if (data.category || data.tags) {
+        let newForm = { ...form };
+        if (data.category) {
+          // Check if category exists in options or we might need to add it dynamically, but we'll try to match
+          newForm.category = data.category;
+        }
+        if (data.type) {
+          newForm.type = data.type;
+        }
+        if (data.tags && Array.isArray(data.tags)) {
+          newForm.tags = data.tags;
+        }
+        setForm(newForm);
+        toast.success('Category and tags suggested successfully!', { id: toastId });
+      } else {
+        toast.error('Could not generate suggestions', { id: toastId });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error('Error suggesting category and tags', { id: toastId });
+    } finally {
+      setIsSuggestingTags(false);
+    }
   };
 
   const handleAiAutoFill = async () => {
@@ -855,6 +908,12 @@ export function AdminPage() {
             {t('manageUpdates')}
           </button>
           <button
+            onClick={() => setActiveTab('ui')}
+            className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'ui' ? 'bg-academic-blue text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
+          >
+            UI Design
+          </button>
+          <button
             onClick={() => setActiveTab('settings')}
             className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-academic-blue text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
           >
@@ -1169,7 +1228,18 @@ export function AdminPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">{t('descriptionDetails')}</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">{t('descriptionDetails')}</label>
+                    <button
+                      type="button"
+                      onClick={handleAiSuggestTags}
+                      disabled={isSuggestingTags || !form.description || form.description.trim().length < 20}
+                      className="text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 transition-colors disabled:opacity-50"
+                    >
+                      <Sparkles size={14} />
+                      {isSuggestingTags ? 'Suggesting...' : 'Suggest Category & Tags'}
+                    </button>
+                  </div>
                   <textarea 
                     required
                     rows={4}
@@ -1178,6 +1248,58 @@ export function AdminPage() {
                     value={form.description || ''}
                     onChange={e => setForm({...form, description: e.target.value})}
                   />
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">Tags</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {(form.tags || []).map((tag, index) => (
+                      <span key={index} className="bg-slate-100 text-slate-600 px-3 py-1 rounded-full text-sm flex items-center gap-1 border border-slate-200">
+                        {tag}
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, tags: form.tags?.filter((_, i) => i !== index) })}
+                          className="hover:text-red-500 transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      id="tag-input"
+                      placeholder="Add a tag and press Enter"
+                      className="flex-1 px-4 py-2 rounded-xl border border-slate-200 focus:ring-2 focus:ring-academic-blue outline-none transition-all"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const val = e.currentTarget.value.trim();
+                          if (val && !(form.tags || []).includes(val)) {
+                            setForm({ ...form, tags: [...(form.tags || []), val] });
+                            e.currentTarget.value = '';
+                          }
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById('tag-input') as HTMLInputElement;
+                        if (input) {
+                          const val = input.value.trim();
+                          if (val && !(form.tags || []).includes(val)) {
+                            setForm({ ...form, tags: [...(form.tags || []), val] });
+                            input.value = '';
+                          }
+                        }
+                      }}
+                      className="px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-slate-600 font-medium transition-colors"
+                    >
+                      Add
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2004,6 +2126,10 @@ export function AdminPage() {
           <AdSenseAnalytics accountId="ca-pub-6710575017251149" />
         )}
 
+        {activeTab === 'ui' && (
+          <AdminUIThemeManager />
+        )}
+        
         {activeTab === 'settings' && (
           <SystemSettingsManager />
         )}

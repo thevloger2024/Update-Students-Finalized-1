@@ -67,6 +67,12 @@ body {
   .btn-hover-effect {
     @apply hover:shadow-lg hover:shadow-blue-200/50 hover:-translate-y-0.5 active:translate-y-0 active:shadow-md active:scale-95 transition-all duration-300;
   }
+  
+  /* Global blurry buttons */
+  button {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
 }
 
 /* Hide scrollbar for the category tray */
@@ -106,4 +112,84 @@ body {
   20%, 80% { transform: translate3d(2px, 0, 0); }
   30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
   40%, 60% { transform: translate3d(4px, 0, 0); }
+}
+
+/* Theme: Dark 3D */
+:root.theme-dark3d {
+  --academic-blue: #2563eb;
+  --academic-light: #0f172a;
+  --text-color: #f8fafc;
+  --color-white: #1e293b;
+  --color-slate-50: #0f172a;
+}
+:root.theme-dark3d body {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+}
+:root.theme-dark3d .bg-white {
+  background: linear-gradient(145deg, #1e293b, #0f172a) !important;
+  box-shadow: 5px 5px 15px #0a0f1c, -5px -5px 15px #22334a !important;
+  border: 1px solid #334155 !important;
+  color: #f1f5f9;
+}
+:root.theme-dark3d button, :root.theme-dark3d a.btn-hover-effect {
+  box-shadow: 3px 3px 10px #0a0f1c, -3px -3px 10px #22334a !important;
+}
+:root.theme-dark3d button:active, :root.theme-dark3d a.btn-hover-effect:active {
+  box-shadow: inset 3px 3px 10px #0a0f1c, inset -3px -3px 10px #22334a !important;
+}
+
+/* Theme: Animation */
+:root.theme-animation body {
+  background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+  background-size: 400% 400%;
+  animation: gradientBG 15s ease infinite;
+}
+@keyframes gradientBG {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+:root.theme-animation .bg-white {
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(10px);
+}
+:root.theme-animation button {
+  animation: pulse-soft 3s infinite;
+}
+@keyframes pulse-soft {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+/* Theme: Smooth Blurry (Glassmorphism) */
+:root.theme-smoothBlurry body {
+  background: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop') no-repeat center center fixed;
+  background-size: cover;
+}
+:root.theme-smoothBlurry .bg-white,
+:root.theme-smoothBlurry .bg-slate-50,
+:root.theme-smoothBlurry header {
+  background: rgba(255, 255, 255, 0.25) !important;
+  backdrop-filter: blur(20px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(150%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1) !important;
+  color: #0f172a !important;
+}
+
+/* Add blur effect to all buttons */
+@layer base {
+  button {
+    /* Glassmorphism subtle effect for all buttons */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    
+  }
+}
+
+/* Button Blurry Fix for specific background colors to look good */
+button.bg-academic-blue, button.bg-blue-600, button.bg-purple-600, button.bg-red-600, button.bg-green-600 {
+  background-color: rgba(30, 58, 138, 0.85); /* fallback */
+  backdrop-filter: blur(8px);
 }

@@ -362,8 +362,44 @@ Only return valid JSON, no extra text.`;
     }
   });
 
+
+  // ─────────────────────────────────────────────────────────
+  // 🏷️ SUGGEST TAGS & CATEGORY
+  // ─────────────────────────────────────────────────────────
+  app.post('/api/gemini/suggest-tags', async (req, res) => {
+    try {
+      const { description } = req.body;
+      const ai = getAiClient();
+      const prompt = `Analyze the following description for an educational/job/admit card/result/scholarship update and suggest the most appropriate category and a list of up to 5 relevant tags.
+
+Description: "${description}"
+
+Return ONLY a valid JSON object in this format:
+{
+  "category": "category name here",
+  "type": "job|admit_card|result|scholarship|updates",
+  "tags": ["tag1", "tag2", "tag3"]
+}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          temperature: 0.2
+        }
+      });
+      const result = JSON.parse(response.text?.trim() || '{}');
+      res.json(result);
+    } catch (error: any) {
+      console.error('Suggest tags error:', error);
+      res.status(500).json({ error: error.message || 'Failed to suggest tags' });
+    }
+  });
+
   // ─────────────────────────────────────────────────────────
   // ✍️ AUTO-FILL (High Thinking + Google Search)
+
   // ─────────────────────────────────────────────────────────
   app.post('/api/gemini/auto-fill', async (req, res) => {
     try {

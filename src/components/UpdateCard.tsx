@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { cn, formatDate, timeAgo } from '../contexts/utils';
-import { Bookmark, Share2, Star, Sparkles, MessageCircle, Clock, Flame } from 'lucide-react';
+import { Bookmark, Share2, Star, Sparkles, MessageCircle, Clock, Flame, Tag } from 'lucide-react';
 import { toast } from 'sonner';
 import { useBookmarkContext } from '../contexts/BookmarkContext';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -41,6 +41,7 @@ export interface UpdateData {
   applicationFees?: ApplicationFee[];
   postVacancies?: PostVacancy[];
   featured?: boolean;
+  tags?: string[];
   createdAt: number;
   views?: number;
   thumbnail?: string;
@@ -212,6 +213,12 @@ export const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
             >
               <TranslatedText text={update.state} />
             </Link>
+            {update.tags && update.tags.length > 0 && update.tags.slice(0, 3).map((tag, idx) => (
+              <span key={idx} className="px-2 py-0.5 bg-purple-50 text-purple-600 text-[10px] font-bold rounded-full border border-purple-100 flex items-center gap-1">
+                <Tag size={8} />
+                <TranslatedText text={tag} />
+              </span>
+            ))}
           </div>
 
           <div className="pt-2 border-t border-slate-100">

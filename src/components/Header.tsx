@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GraduationCap, LogIn, LogOut, User, Search, X, Bookmark, MessageSquarePlus, Bell, Shield, Settings, Languages, ChevronDown, Wrench, History, Sun, Moon, Calendar } from 'lucide-react';
+import { GraduationCap, LogIn, LogOut, User, Search, X, Bookmark, MessageSquarePlus, Bell, Shield, Settings, Languages, ChevronDown, Wrench, History, Calendar } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { auth, signInWithGoogle, logOut } from '../firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
@@ -32,7 +32,7 @@ export function Header() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   const { language, setLanguage, t } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const { settings } = useSiteSettings();
   const siteName = settings.siteName;
   const navigate = useNavigate();
@@ -227,13 +227,7 @@ export function Header() {
           </form>
           
           <div className="flex items-center gap-2 lg:gap-4 shrink-0 flex-wrap justify-center">
-            <button
-              onClick={toggleTheme}
-              className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all btn-hover-effect"
-              title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            >
-              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-            </button>
+            
             <Link 
               to="/tools" 
               className="flex items-center gap-1.5 text-sm font-medium text-slate-500 hover:text-academic-blue transition-colors btn-hover-effect px-2 py-1 rounded-lg"

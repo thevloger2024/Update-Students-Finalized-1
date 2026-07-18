@@ -1,45 +1,52 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import { db } from '../firebase';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
-type Theme = 'light' | 'dark';
+export type UITheme = 'bright' | 'dark3d' | 'animation' | 'smoothBlurry';
 
 interface ThemeContextType {
-  theme: Theme;
-  toggleTheme: () => void;
+  theme: UITheme;
+  setThemeGlobal: (theme: UITheme) => Promise<void>;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    try {
-      const savedTheme = localStorage.getItem('theme');
-      if (savedTheme === 'light' || savedTheme === 'dark') return savedTheme;
-    } catch (e) {
-      console.warn('localStorage error', e);
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+  const [theme, setTheme] = useState<UITheme>('bright');
+
+  useEffect(() => {
+    // Listen to global theme from Firestore
+    const unsub = onSnapshot(doc(db, 'site_settings', 'ui_config'), (docSnap) => {
+      if (docSnap.exists() && docSnap.data().theme) {
+        setTheme(docSnap.data().theme as UITheme);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const root = document.documentElement;
-    if (theme === 'dark') {
+    // Remove all theme classes
+    root.classList.remove('theme-bright', 'theme-dark3d', 'theme-animation', 'theme-smoothBlurry', 'dark');
+    
+    // Add current theme class
+    root.classList.add(`theme-${theme}`);
+    
+    if (theme === 'dark3d') {
       root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    try {
-      localStorage.setItem('theme', theme);
-    } catch (e) {
-      console.warn('localStorage error', e);
     }
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
+  const setThemeGlobal = async (newTheme: UITheme) => {
+    try {
+      await setDoc(doc(db, 'site_settings', 'ui_config'), { theme: newTheme }, { merge: true });
+    } catch (e) {
+      console.error('Failed to update theme globally', e);
+    }
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, setThemeGlobal }}>
       {children}
     </ThemeContext.Provider>
   );
