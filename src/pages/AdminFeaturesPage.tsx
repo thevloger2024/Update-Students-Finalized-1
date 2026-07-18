@@ -79,15 +79,20 @@ export function AdminFeaturesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex flex-col bg-slate-50">
+      <Header />
+      <div className="flex-1 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-academic-blue"></div>
+      </div>
       </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header />
+      <div className="flex-1 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -107,12 +112,15 @@ export function AdminFeaturesPage() {
           </button>
         </motion.div>
       </div>
+      </div>
     );
   }
 
   if (user.email !== ADMIN_EMAIL) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header />
+      <div className="flex-1 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -141,6 +149,7 @@ export function AdminFeaturesPage() {
             </button>
           </div>
         </motion.div>
+      </div>
       </div>
     );
   }

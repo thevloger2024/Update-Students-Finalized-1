@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Header } from '../components/Header';
-import { auth, db } from '../firebase';
+import { auth, db, requestPushNotificationPermission } from '../firebase';
 import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Bell, Briefcase, FileText, CheckCircle, Save, ArrowLeft, ShieldCheck } from 'lucide-react';
@@ -70,7 +70,26 @@ export function NotificationSettingsPage() {
     return () => unsubscribe();
   }, [userId]);
 
-  const handleToggle = (key: keyof NotificationSettings) => {
+  const handleToggle = async (key: keyof NotificationSettings) => {
+    if (key === 'globalEnabled' && !settings.globalEnabled) {
+      try {
+        const token = await requestPushNotificationPermission();
+        if (token) {
+          toast.success(t('pushEnabledSuccess') || 'Push notifications enabled!');
+          if (userId) {
+            // Save token to user profile
+            await setDoc(doc(db, `users/${userId}`), { fcmToken: token }, { merge: true });
+          }
+        } else {
+          toast.error(t('pushPermissionDenied') || 'Push notification permission denied.');
+          return;
+        }
+      } catch (error) {
+        console.error(error);
+        toast.error('Failed to enable push notifications');
+        return;
+      }
+    }
     if (typeof settings[key] === 'boolean') {
       setSettings(prev => ({
         ...prev,

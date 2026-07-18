@@ -228,7 +228,7 @@ export function Home() {
   const results = filteredUpdates.filter((u) => u.type === 'result');
   const scholarships = filteredUpdates.filter((u) => u.type === 'scholarship');
   const featuredUpdates = filteredUpdates.filter((u) => u.featured);
-  const latestUpdates = filteredUpdates.slice(0, 8);
+  const latestUpdates = filteredUpdates.filter((u) => u.type === 'updates');
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans">
@@ -394,10 +394,7 @@ export function Home() {
                                     </p>
                                   </div>
                                   <button 
-                                    onClick={() => {
-                                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                                      setSelectedCategory(null);
-                                    }}
+                                    onClick={() => navigate('/category/updates')}
                                     className="group flex items-center gap-2 text-academic-blue font-bold hover:text-blue-800 transition-colors bg-blue-50 px-6 py-3 rounded-xl"
                                   >
                                     {t('viewAll')}

@@ -24,7 +24,7 @@ const ADMIN_EMAIL = "thevloger2024@gmail.com";
 
 interface UpdateForm {
   title: string;
-  type: 'job' | 'admit_card' | 'result' | 'scholarship';
+  type: 'job' | 'admit_card' | 'result' | 'scholarship' | 'updates';
   category: string;
   state: string;
   organization: string;
@@ -744,15 +744,20 @@ export function AdminPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex flex-col bg-slate-50">
+      <Header />
+      <div className="flex-1 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-academic-blue"></div>
       </div>
+    </div>
     );
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header />
+      <div className="flex-1 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -772,12 +777,15 @@ export function AdminPage() {
           </button>
         </motion.div>
       </div>
+      </div>
     );
   }
 
   if (user.email !== ADMIN_EMAIL) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <Header />
+      <div className="flex-1 flex items-center justify-center p-4">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -807,6 +815,7 @@ export function AdminPage() {
           </div>
         </motion.div>
       </div>
+      </div>
     );
   }
 
@@ -815,7 +824,7 @@ export function AdminPage() {
       <Header />
       
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex flex-wrap md:flex-nowrap items-center gap-4 md:gap-3 mb-8">
           <div className="p-3 bg-academic-blue text-white rounded-2xl">
             <LayoutDashboard size={28} />
           </div>
@@ -838,7 +847,7 @@ export function AdminPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex flex-wrap items-center gap-2 mb-8 bg-white p-1.5 rounded-2xl border border-slate-200 w-fit">
+        <div className="flex flex-wrap items-center gap-2 mb-8 bg-white p-1.5 rounded-2xl border border-slate-200 w-full md:w-fit">
           <button
             onClick={() => setActiveTab('updates')}
             className={`px-6 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'updates' ? 'bg-academic-blue text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'}`}
@@ -971,7 +980,7 @@ export function AdminPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-600 uppercase tracking-wider field-required">{t('title')}</label>
                     <input 
@@ -1085,7 +1094,7 @@ export function AdminPage() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-600 uppercase tracking-wider">{t('type')}</label>
                     <select 
@@ -1097,6 +1106,7 @@ export function AdminPage() {
                       <option value="admit_card">{t('admitCard')}</option>
                       <option value="result">{t('results')}</option>
                       <option value="scholarship">{t('scholarships')}</option>
+                      <option value="updates">{t('updates') || 'Updates'}</option>
                     </select>
                   </div>
 
@@ -1666,6 +1676,7 @@ export function AdminPage() {
                       <option value="admit_card">{t('admitCard')}</option>
                       <option value="result">{t('results')}</option>
                       <option value="scholarship">{t('scholarships')}</option>
+                      <option value="updates">{t('updates') || 'Updates'}</option>
                     </select>
                   </div>
                 </div>

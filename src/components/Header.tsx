@@ -140,7 +140,7 @@ export function Header() {
   return (
     <header className="w-full bg-white shadow-sm pt-4 pb-2 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-2 flex-wrap lg:flex-nowrap">
           <Link to="/" className="flex items-center gap-2 text-academic-blue shrink-0">
             <GraduationCap size={32} strokeWidth={1.5} />
             <span className="font-serif text-2xl md:text-3xl font-bold tracking-tight">
@@ -179,7 +179,7 @@ export function Header() {
                   title={t('changeLanguage')}
                 >
                   <Languages size={18} />
-                  <span className="text-xs font-bold uppercase hidden sm:inline">{language}</span>
+                  <span className="text-xs font-bold uppercase hidden xl:inline">{language}</span>
                   <ChevronDown size={14} className={cn("transition-transform duration-200", isLangMenuOpen && "rotate-180")} />
                 </button>
 
@@ -226,7 +226,7 @@ export function Header() {
             </div>
           </form>
           
-          <div className="flex items-center gap-4 shrink-0">
+          <div className="flex items-center gap-2 lg:gap-4 shrink-0 flex-wrap justify-center">
             <button
               onClick={toggleTheme}
               className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 transition-all btn-hover-effect"
@@ -240,7 +240,7 @@ export function Header() {
               title={t('tools')}
             >
               <Wrench size={18} />
-              <span className="hidden sm:inline">{t('tools')}</span>
+              <span className="hidden xl:inline">{t('tools')}</span>
             </Link>
             <Link
               to="/exam-calendar"
@@ -248,7 +248,7 @@ export function Header() {
               title="Exam Calendar"
             >
               <Calendar size={18} />
-              <span className="hidden lg:inline">Calendar</span>
+              <span className="hidden xl:inline">Calendar</span>
             </Link>
             <Link
               to="/saved"
@@ -256,7 +256,7 @@ export function Header() {
               title={t('saved')}
             >
               <Bookmark size={18} />
-              <span className="hidden sm:inline">{t('saved')}</span>
+              <span className="hidden xl:inline">{t('saved')}</span>
             </Link>
             <button 
               onClick={() => setIsFeedbackOpen(true)}
@@ -264,7 +264,7 @@ export function Header() {
               title={t('feedback')}
             >
               <MessageSquarePlus size={18} />
-              <span className="hidden sm:inline">{t('feedback')}</span>
+              <span className="hidden xl:inline">{t('feedback')}</span>
             </button>
             {user && (
               <Link 
@@ -273,7 +273,7 @@ export function Header() {
                 title={t('alerts')}
               >
                 <Bell size={18} />
-                <span className="hidden sm:inline">{t('alerts')}</span>
+                <span className="hidden xl:inline">{t('alerts')}</span>
               </Link>
             )}
             {user && user.email === ADMIN_EMAIL && (
@@ -284,7 +284,7 @@ export function Header() {
                   title={t('admin')}
                 >
                   <Shield size={18} />
-                  <span className="hidden sm:inline">{t('admin')}</span>
+                  <span className="hidden xl:inline">{t('admin')}</span>
                 </Link>
                 <Link 
                   to="/admin/features" 
@@ -292,7 +292,7 @@ export function Header() {
                   title={t('features')}
                 >
                   <Settings size={18} />
-                  <span className="hidden sm:inline">{t('features')}</span>
+                  <span className="hidden xl:inline">{t('features')}</span>
                   {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-white shadow-sm ring-2 ring-white">
                       {unreadCount > 9 ? '9+' : unreadCount}
@@ -314,8 +314,8 @@ export function Header() {
                       <User size={20} />
                     </div>
                   )}
-                  <span className="font-medium hidden lg:block">{user.displayName}</span>
-                  <ChevronDown size={14} className={cn("transition-transform duration-200 hidden lg:block", isProfileMenuOpen && "rotate-180")} />
+                  <span className="font-medium hidden xl:block">{user.displayName}</span>
+                  <ChevronDown size={14} className={cn("transition-transform duration-200 hidden xl:block", isProfileMenuOpen && "rotate-180")} />
                 </button>
 
                 <AnimatePresence>

@@ -15,7 +15,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { TranslatedText } from '../components/TranslatedText';
 
 export function CategoryPage() {
-  const { type } = useParams<{ type: 'job' | 'admit_card' | 'result' | 'scholarship' }>();
+  const { type } = useParams<{ type: 'job' | 'admit_card' | 'result' | 'scholarship' | 'updates' }>();
   const navigate = useNavigate();
   const { t } = useLanguage();
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -27,7 +27,8 @@ export function CategoryPage() {
     job: t('latestJobs'),
     admit_card: t('admitCard'),
     result: t('results'),
-    scholarship: t('scholarships')
+    scholarship: t('scholarships'),
+    updates: t('latestUpdates') || 'Latest Updates'
   };
 
   const types = [

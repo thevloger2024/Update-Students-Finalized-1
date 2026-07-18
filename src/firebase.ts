@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, limit, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import firebaseConfig from '../firebase-applet-config.json';
@@ -93,3 +94,23 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
+
+export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
+
+export const requestPushNotificationPermission = async () => {
+  if (!messaging) return null;
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      const token = await getToken(messaging, {
+        // You should add your VAPID key here if you have one
+        // vapidKey: 'YOUR_VAPID_KEY'
+      });
+      return token;
+    }
+    return null;
+  } catch (error) {
+    console.error('An error occurred while retrieving token. ', error);
+    return null;
+  }
+};

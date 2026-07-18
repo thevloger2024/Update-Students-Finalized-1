@@ -22,7 +22,7 @@ export interface PostVacancy {
 export interface UpdateData {
   id: string;
   title: string;
-  type: 'job' | 'admit_card' | 'result' | 'scholarship';
+  type: 'job' | 'admit_card' | 'result' | 'scholarship' | 'updates';
   category: string;
   state: string;
   startDate?: string;

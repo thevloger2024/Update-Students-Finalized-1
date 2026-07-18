@@ -44,6 +44,7 @@
 }
 
 body {
+  overflow-x: hidden;
   background-color: var(--academic-light);
   color: var(--text-color);
   font-family: var(--font-sans);

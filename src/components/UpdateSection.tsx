@@ -8,7 +8,7 @@ import { TranslatedText } from './TranslatedText';
 
 interface UpdateSectionProps {
   title: string;
-  type: 'job' | 'admit_card' | 'result' | 'scholarship';
+  type: 'job' | 'admit_card' | 'result' | 'scholarship' | 'updates';
   updates: UpdateData[];
 }
 
